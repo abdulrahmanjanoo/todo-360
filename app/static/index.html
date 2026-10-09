@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Janoo To-Do 360</title>
+<style>
+/* Layout: one column desk. Sticky header with counts, tab row, list on the left, detail drawer slides over on the right. */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --surface-2:#eef0f4; --line:#dfe3ea;
+  --fg:#16191f; --muted:#5d6574; --faint:#8a92a1;
+  --accent:#2457d6; --accent-soft:#e3eafc;
+  --good:#1f8a4c; --good-soft:#e2f4ea; --warn:#a86400; --warn-soft:#fbf0dc; --bad:#c23b32; --bad-soft:#fbe5e3;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101216; --surface:#181b21; --surface-2:#20242c; --line:#2c313b;
+  --fg:#e9ebef; --muted:#a2a9b6; --faint:#737b89;
+  --accent:#7aa2ff; --accent-soft:#1d2a4a;
+  --good:#5fd08d; --good-soft:#173324; --warn:#f0b35a; --warn-soft:#3a2b12; --bad:#ff7d73; --bad-soft:#3d1c1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --surface-2:#20242c; --line:#2c313b;
+  --fg:#e9ebef; --muted:#a2a9b6; --faint:#737b89;
+  --accent:#7aa2ff; --accent-soft:#1d2a4a;
+  --good:#5fd08d; --good-soft:#173324; --warn:#f0b35a; --warn-soft:#3a2b12; --bad:#ff7d73; --bad-soft:#3d1c1a; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--font)}
+a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:20px}
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:14px 10px}
+.brand{font-size:19px;font-weight:650;letter-spacing:-.01em}
+.brand small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn[disabled]{opacity:.5;cursor:default}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:8px}
+.tab{border:0;background:none;padding:6px 12px;border-radius:999px;color:var(--muted);white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--surface-2);color:var(--fg);font-weight:600}
+.tab .n{font-variant-numeric:tabular-nums;color:var(--faint);margin-left:4px}
+main{padding-block:18px 60px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:22px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;text-align:left}
+.kpi b{display:block;font-size:24px;font-weight:650;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:12.5px}
+.kpi.warn b{color:var(--warn)} .kpi.bad b{color:var(--bad)} .kpi.good b{color:var(--good)}
+h2{font-size:15px;margin:22px 0 8px;display:flex;align-items:baseline;gap:8px}
+h2 .sub{font-weight:400;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.filters select,.filters input{font:inherit;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.filters input{min-width:200px;flex:1}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:10px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row.click{cursor:pointer} .row.click:hover{background:var(--surface-2)}
+.row .main{min-width:0}
+.row .t{overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px}
+.meta a{color:var(--muted);text-decoration:underline;text-decoration-color:var(--line)}
+.id{font:12px var(--mono);color:var(--faint)}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.acc{background:var(--accent-soft);color:var(--accent)}
+.acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.act{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:3px 8px;font-size:12.5px;color:var(--muted)}
+.act:hover{color:var(--fg);border-color:var(--muted)}
+.act.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--faint)}
+.dot.good{background:var(--good)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)} .dot.acc{background:var(--accent)}
+.group{padding:8px 14px;background:var(--surface-2);font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+.group:first-child{border-top:0}
+.group a{font-weight:600;color:var(--fg)}
+.more{display:block;width:100%;border:0;border-top:1px solid var(--line);background:none;padding:10px;color:var(--accent)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+.check{display:grid;grid-template-columns:repeat(5,auto);gap:6px;justify-content:start}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,12,16,.35);z-index:9}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--surface);z-index:10;border-left:1px solid var(--line);display:flex;flex-direction:column}
+.drawer .hd{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+.drawer .hd h3{margin:0;font-size:17px;text-wrap:balance}
+.drawer .bd{padding:16px 20px 40px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.links{display:flex;flex-wrap:wrap;gap:6px}
+.links a,.links span.off{border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px}
+.links span.off{color:var(--faint)}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.sec h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.sec ul{margin:0;padding-left:18px}
+pre.note{white-space:pre-wrap;font:12.5px/1.5 var(--mono);background:var(--surface-2);border-radius:8px;padding:12px;max-height:60vh;overflow:auto;margin:0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:20;font-size:13px}
+.err{background:var(--bad-soft);color:var(--bad);padding:12px 14px;border-radius:var(--r);margin-bottom:12px}
+@media (max-width:640px){.row{grid-template-columns:auto 1fr}.row .acts{grid-column:2;justify-content:flex-start}.kv{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">To-Do 360<small id="sub">Reading your Obsidian vault…</small></div>
+      <div class="spacer"></div>
+      <button class="btn" id="refresh" title="Re-read the vault">Refresh</button>
+      <button class="btn primary" id="apply" disabled title="Close the to-dos you marked done, in the vault">Apply 0 to vault</button>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+  </div>
+</header>
+<main class="wrap" id="main"><div class="empty">Loading…</div></main>
+<div id="drawerHost"></div>
+
+<script>
+"use strict";
+const S = {snap:null, tab:"focus", f:{owner:"me", status:"open", q:"", src:"all", mstatus:"all"}, limit:{}};
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtDate = iso => { if(!iso) return "—"; const [y,m,d] = iso.split("-").map(Number); const now = new Date();
+  return d + " " + MONTHS[m-1] + (y !== now.getFullYear() ? " " + y : ""); };
+const daysAgo = iso => { if(!iso) return null; return Math.round((new Date(S.snap.today) - new Date(iso)) / 864e5); };
+const obsidian = rel => rel ? "obsidian://open?vault=" + encodeURIComponent(S.snap.vault_name) + "&file=" + encodeURIComponent(rel.replace(/\.md$/,"")) : "";
+
+async function api(path, body){
+  const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
+  const j = await r.json().catch(()=>({error:"Bad response"}));
+  if(!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(msg){ const t = document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(), 2600); }
+
+/* ---------- derived state ---------- */
+function decisionOf(t){ return S.snap.decisions.todos[t.id] || null; }
+function effective(t){
+  const d = decisionOf(t);
+  if(t.status !== "open") return t.status;
+  if(!d) return "open";
+  if(d.action === "snooze") return (d.until && d.until > S.snap.today) ? "snoozed" : "open";
+  return d.action; // done | not_mine | keep
+}
+function ownerKind(t){
+  if(!t.owner) return "unowned";
+  if(t.owner === S.snap.me) return "me";
+  return t.owner_title.startsWith("m/Tericsoft/") ? "team" : "external";
+}
+function meetingById(id){ return S.idx.meetings[id]; }
+function pendingApply(){ return Object.entries(S.snap.decisions.todos).filter(([id,d]) => d.action==="done" && !d.applied && S.idx.todos[id]?.status==="open").length; }
+function meetingState(m){
+  const conf = S.snap.decisions.meetings[m.id];
+  if(m.status !== "captured") return {cls: m.status==="skipped" ? "bad" : "warn", label: {skipped:"Not captured", deferred:"Waiting at source", not_extracted:"Not processed"}[m.status]};
+  if(!m.airtable) return {cls:"warn", label:"No Airtable row"};
+  if(conf?.confirmed === "did_not_happen") return {cls:"bad", label:"Didn't happen"};
+  if(conf?.confirmed === "happened") return {cls:"good", label:"Confirmed"};
+  return {cls:"acc", label:"Captured"};
+}
+
+/* ---------- render ---------- */
+const TABS = [["focus","Focus"],["todos","To-dos"],["meetings","Meetings"],["gaps","Gaps"]];
+function renderTabs(){
+  const open = S.snap.todos.filter(t => effective(t)==="open");
+  const n = {focus:"", todos: open.length, meetings: S.snap.meetings.length, gaps: gaps().total};
+  $("#tabs").innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${l}${n[k]!==""?`<span class="n">${n[k]}</span>`:""}</button>`).join("");
+  const p = pendingApply();
+  const b = $("#apply"); b.disabled = !p; b.textContent = `Apply ${p} to vault`;
+  $("#sub").textContent = `${S.snap.vault_name} · read ${new Date(S.snap.generated).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})}`;
+}
+function render(){
+  renderTabs();
+  const m = $("#main");
+  m.innerHTML = ({focus:viewFocus, todos:viewTodos, meetings:viewMeetings, gaps:viewGaps})[S.tab]();
+  try{ localStorage.setItem("t360.tab", S.tab); localStorage.setItem("t360.f", JSON.stringify(S.f)); }catch(e){}
+}
+
+function todoRow(t, opts={}){
+  const d = decisionOf(t), e = effective(t), mt = meetingById(t.meeting_id);
+  const age = t.age_days;
+  const dotCls = e==="done" ? "good" : (age!=null && age>30 ? "bad" : age!=null && age>14 ? "warn" : "acc");
+  const actions = t.status==="open" ? [["done","Done"],["snooze","Snooze 7d"],["not_mine","Not mine"],["keep","Keep"]]
+    .map(([a,l]) => `<button class="act ${d?.action===a?"on":""}" data-todo="${esc(t.id)}" data-action="${d?.action===a?"clear":a}">${l}</button>`).join("")
+    : `<span class="pill ${t.status==="closed"?"good":""}">${esc(t.status)}</span>`;
+  const status = d?.action==="done" ? (d.applied ? `<span class="pill good">closed in vault</span>` : `<span class="pill good">done, not applied</span>`)
+    : d?.action==="snooze" ? `<span class="pill">snoozed to ${fmtDate(d.until)}</span>` : d?.action==="not_mine" ? `<span class="pill">not mine</span>` : d?.action==="keep" ? `<span class="pill acc">keeping</span>` : "";
+  return `<div class="row"><span class="dot ${dotCls}"></span><div class="main">
+    <div class="t">${esc(t.text)}</div>
+    <div class="meta"><span class="id">${esc(t.id)}</span>${t.owner?`<span>${esc(t.owner)}</span>`:`<span>no owner</span>`}
+      ${t.tag_short?`<span>${esc(t.tag_short)}</span>`:""}<span>${age!=null?age+"d old":""}</span>
+      ${!opts.noMeeting && mt ? `<a href="#" data-meeting="${esc(mt.id)}">${esc(mt.title)}</a>` : ""} ${status}</div>
+  </div><div class="acts">${actions}</div></div>`;
+}
+
+function viewFocus(){
+  const mine = S.snap.todos.filter(t => effective(t)==="open" && ownerKind(t)==="me");
+  const recent = S.snap.meetings.filter(m => daysAgo(m.date) <= 7);
+  const unconfirmed = recent.filter(m => m.status==="captured" && !S.snap.decisions.meetings[m.id]);
+  const g = gaps();
+  const stale = mine.filter(t => t.age_days > 30).length;
+  const fresh = mine.filter(t => t.age_days != null && t.age_days <= 7).sort((a,b) => (a.age_days-b.age_days));
+  const lim = S.limit.focus || 12;
+  return `
+  <div class="kpis">
+    <button class="kpi" data-go="todos" data-owner="me">${'<b>'+mine.length+'</b>'}<span>open to-dos on you</span></button>
+    <button class="kpi ${fresh.length?"":"good"}" data-go="todos" data-owner="me">${'<b>'+fresh.length+'</b>'}<span>new this week</span></button>
+    <button class="kpi ${stale?"warn":"good"}" data-go="todos" data-owner="me">${'<b>'+stale+'</b>'}<span>older than 30 days</span></button>
+    <button class="kpi ${unconfirmed.length?"warn":"good"}" data-go="meetings">${'<b>'+unconfirmed.length+'</b>'}<span>meetings this week to confirm</span></button>
+    <button class="kpi ${g.total?"bad":"good"}" data-go="gaps">${'<b>'+g.total+'</b>'}<span>gaps in capture</span></button>
+  </div>
+  <h2>New to-dos on you <span class="sub">from the last 7 days, newest first</span></h2>
+  <div class="list">${fresh.length ? fresh.slice(0,lim).map(t=>todoRow(t)).join("") + (fresh.length>lim?`<button class="more" data-more="focus">Show ${Math.min(12,fresh.length-lim)} more</button>`:"") : `<div class="empty">Nothing new on you this week.</div>`}</div>
+  <h2>Meetings this week <span class="sub">tap one to see links, transcript and its to-dos</span></h2>
+  <div class="list">${recent.length ? recent.map(meetingRow).join("") : `<div class="empty">No meetings in the last 7 days.</div>`}</div>`;
+}
+
+function filterTodos(){
+  const f = S.f, q = f.q.trim().toLowerCase();
+  return S.snap.todos.filter(t => {
+    const e = effective(t);
+    if(f.status==="open" && e!=="open") return false;
+    if(f.status==="decided" && !["done","not_mine","keep","snoozed"].includes(e)) return false;
+    if(f.status==="closed" && t.status==="open") return false;
+    if(f.owner!=="all" && ownerKind(t)!==f.owner) return false;
+    if(q){ const mt = meetingById(t.meeting_id); const hay = (t.text+" "+t.id+" "+t.tag+" "+t.owner+" "+(mt?.title||"")).toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  });
+}
+function viewTodos(){
+  const list = filterTodos();
+  const groups = new Map();
+  for(const t of list){ const k = t.meeting_id || "~"; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+  const keys = [...groups.keys()].sort((a,b) => (meetingById(b)?.date||"").localeCompare(meetingById(a)?.date||""));
+  const lim = S.limit.todos || 25;
+  let html = "", shown = 0;
+  for(const k of keys){
+    if(shown >= lim) break;
+    const mt = meetingById(k), ts = groups.get(k);
+    html += `<div class="group">${mt ? `<a href="#" data-meeting="${esc(mt.id)}">${esc(mt.title)}</a><span>${fmtDate(mt.date)}</span><span>${ts.length} to-do${ts.length>1?"s":""}</span>` : `<span>Not linked to a meeting</span><span>${ts.length}</span>`}</div>`;
+    html += ts.map(t => todoRow(t, {noMeeting:true})).join("");
+    shown++;
+  }
+  return `
+  <div class="filters">
+    <select id="fOwner" aria-label="Owner">${[["me","On me"],["team","Tericsoft team"],["external","External people"],["unowned","No owner"],["all","Everyone"]].map(([v,l])=>`<option value="${v}" ${S.f.owner===v?"selected":""}>${l}</option>`).join("")}</select>
+    <select id="fStatus" aria-label="Status">${[["open","Open, needs a decision"],["decided","Decided by me"],["closed","Closed in vault"],["all","All"]].map(([v,l])=>`<option value="${v}" ${S.f.status===v?"selected":""}>${l}</option>`).join("")}</select>
+    <input id="fQ" type="search" placeholder="Search text, T-id, project, meeting" value="${esc(S.f.q)}">
+  </div>
+  <h2>${list.length} to-dos <span class="sub">grouped by meeting, newest meeting first</span></h2>
+  <div class="list">${html || `<div class="empty">No to-dos match.</div>`}${keys.length>shown?`<button class="more" data-more="todos">Show more meetings (${keys.length-shown} left)</button>`:""}</div>`;
+}
+
+function meetingRow(m){
+  const st = meetingState(m);
+  const open = m.todo_ids.filter(id => S.idx.todos[id] && effective(S.idx.todos[id])==="open").length;
+  return `<div class="row click" data-meeting="${esc(m.id)}"><span class="dot ${st.cls}"></span><div class="main">
+    <div class="t">${esc(m.title)}</div>
+    <div class="meta"><span>${fmtDate(m.date)}${m.start?" · "+esc(m.start):""}</span><span>${m.source==="wisprflow"?"Wispr Flow":"Read AI"}</span>
+      ${m.platform?`<span>${esc(m.platform)}</span>`:""}${m.todo_ids.length?`<span>${open} open of ${m.todo_ids.length} to-dos</span>`:""}
+      ${m.reason?`<span>${esc(m.reason.slice(0,90))}</span>`:""}</div>
+  </div><div class="acts"><span class="pill ${st.cls}">${st.label}</span></div></div>`;
+}
+function viewMeetings(){
+  const q = S.f.q.trim().toLowerCase();
+  const list = S.snap.meetings.filter(m => (S.f.src==="all" || m.source===S.f.src)
+    && (S.f.mstatus==="all" || (S.f.mstatus==="unconfirmed" ? (m.status==="captured" && !S.snap.decisions.meetings[m.id]) : S.f.mstatus==="problem" ? meetingState(m).cls!=="acc" && meetingState(m).cls!=="good" : true))
+    && (!q || (m.title+" "+m.source_title+" "+m.id+" "+(m.tags||[]).join(" ")).toLowerCase().includes(q)));
+  const lim = S.limit.meetings || 40;
+  return `<div class="filters">
+    <select id="fSrc" aria-label="Source">${[["all","All sources"],["readai","Read AI"],["wisprflow","Wispr Flow"]].map(([v,l])=>`<option value="${v}" ${S.f.src===v?"selected":""}>${l}</option>`).join("")}</select>
+    <select id="fMs" aria-label="State">${[["all","Any state"],["unconfirmed","Not confirmed by me"],["problem","Problems only"]].map(([v,l])=>`<option value="${v}" ${S.f.mstatus===v?"selected":""}>${l}</option>`).join("")}</select>
+    <input id="fQ" type="search" placeholder="Search title, meeting ID, tag" value="${esc(S.f.q)}">
+  </div>
+  <h2>${list.length} meetings</h2>
+  <div class="list">${list.slice(0,lim).map(meetingRow).join("") || `<div class="empty">No meetings match.</div>`}${list.length>lim?`<button class="more" data-more="meetings">Show 40 more</button>`:""}</div>`;
+}
+
+function gaps(){
+  const failed = S.snap.meetings.filter(m => m.status!=="captured");
+  const noAt = S.snap.meetings.filter(m => m.status==="captured" && !m.airtable);
+  const unowned = S.snap.todos.filter(t => t.status==="open" && !t.owner).length;
+  return {failed, noAt, lint:S.snap.lint, unowned, total: failed.filter(m=>m.status!=="skipped").length + noAt.length + S.snap.lint.length};
+}
+function viewGaps(){
+  const g = gaps();
+  const byStatus = s => g.failed.filter(m => m.status===s);
+  const sec = (title, sub, rows, empty) => `<h2>${title} <span class="sub">${sub}</span></h2><div class="list">${rows || `<div class="empty">${empty}</div>`}</div>`;
+  return sec("Waiting", "landed or waiting at the source, should clear on a later run", [...byStatus("deferred"), ...byStatus("not_extracted")].map(meetingRow).join(""), "Nothing waiting.")
+    + sec("Captured without an Airtable row", "note exists, Airtable link missing", g.noAt.map(meetingRow).join(""), "Every captured meeting has its Airtable row.")
+    + sec("Notes failing checks", "from the last lint run", g.lint.map(l => `<div class="row"><span class="dot bad"></span><div class="main"><div class="t">${esc(l.subject)}</div><div class="meta"><span>${esc(l.check)}</span><span>${esc(l.detail)}</span></div></div><div class="acts"><a class="act" href="${obsidian(l.subject)}">Open in Obsidian</a></div></div>`).join(""), "All notes pass.")
+    + sec("Not captured", "empty or broken recordings; chase these on the Read AI or Wispr side", byStatus("skipped").map(meetingRow).join(""), "No capture failures.")
+    + `<h2>To-dos with no owner <span class="sub">${g.unowned} open</span></h2><div class="list"><button class="more" data-go="todos" data-owner="unowned">Review them in To-dos</button></div>`;
+}
+
+/* ---------- drawer ---------- */
+async function openMeeting(id){
+  const m = meetingById(id); if(!m) return;
+  const st = meetingState(m), conf = S.snap.decisions.meetings[m.id];
+  const link = (href, label) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${label}</a>` : `<span class="off">${label}</span>`;
+  const todos = m.todo_ids.map(i => S.idx.todos[i]).filter(Boolean);
+  $("#drawerHost").innerHTML = `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-label="${esc(m.title)}">
+    <div class="hd"><div style="flex:1;min-width:0"><h3>${esc(m.title)}</h3><div class="meta"><span class="pill ${st.cls}">${st.label}</span><span>${fmtDate(m.date)}${m.start?" · "+esc(m.start):""}</span></div></div>
+      <button class="btn" data-close aria-label="Close">Close</button></div>
+    <div class="bd">
+      ${m.status==="captured" ? `<div class="sec"><h4>Did this meeting happen?</h4><div class="acts" style="justify-content:flex-start">
+        <button class="act ${conf?.confirmed==="happened"?"on":""}" data-mconf="${conf?.confirmed==="happened"?"clear":"happened"}" data-id="${esc(m.id)}">Yes, it happened</button>
+        <button class="act ${conf?.confirmed==="did_not_happen"?"on":""}" data-mconf="${conf?.confirmed==="did_not_happen"?"clear":"did_not_happen"}" data-id="${esc(m.id)}">No</button></div></div>` : `<div class="err">${esc(m.reason)}</div>`}
+      <div class="sec"><h4>Links</h4><div class="links">
+        ${link(m.report_url, "Read AI report")}${m.source==="wisprflow"?link(m.wispr_url, "Wispr notes"):""}
+        ${link(m.airtable_url, "Airtable row")}${link(obsidian(m.note_file), "Note in Obsidian")}${link(obsidian(m.raw_file), "Raw in Obsidian")}</div></div>
+      <dl class="kv">
+        <dt>Meeting ID</dt><dd class="id">${esc(m.id)}</dd>
+        ${m.source_title && m.source_title!==m.title?`<dt>Original title</dt><dd>${esc(m.source_title)}</dd>`:""}
+        <dt>Source</dt><dd>${m.source==="wisprflow"?"Wispr Flow":"Read AI"}${m.platform?" · "+esc(m.platform):""}</dd>
+        ${m.airtable?`<dt>Airtable</dt><dd class="id">${esc(m.airtable)}</dd>`:""}
+        ${m.participants.length?`<dt>Participants</dt><dd>${m.participants.map(esc).join("<br>")}</dd>`:""}
+      </dl>
+      ${m.context?`<div class="sec"><h4>Context</h4><div>${esc(m.context)}</div></div>`:""}
+      ${m.takeaway.length?`<div class="sec"><h4>Takeaway</h4><ul>${m.takeaway.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+      ${todos.length?`<div class="sec"><h4>To-dos from this meeting</h4><div class="list">${todos.map(t=>todoRow(t,{noMeeting:true})).join("")}</div></div>`:""}
+      <div class="sec"><h4>Read here</h4><div class="acts" style="justify-content:flex-start">
+        ${m.note_file?`<button class="act" data-load="${esc(m.note_file)}">Show note</button>`:""}
+        ${m.raw_file?`<button class="act" data-load="${esc(m.raw_file)}">Show raw transcript</button>`:""}</div>
+        <div id="noteBox" style="margin-top:8px"></div></div>
+    </div></aside>`;
+}
+function closeDrawer(){ $("#drawerHost").innerHTML = ""; }
+
+/* ---------- events ---------- */
+document.addEventListener("click", async ev => {
+  const el = ev.target.closest("[data-tab],[data-go],[data-more],[data-todo],[data-meeting],[data-close],[data-mconf],[data-load]");
+  if(!el) return;
+  if(el.matches("a[data-meeting],a[data-close]")) ev.preventDefault();
+  if(el.dataset.tab){ S.tab = el.dataset.tab; return render(); }
+  if(el.dataset.go){ S.tab = el.dataset.go; if(el.dataset.owner){ S.f.owner = el.dataset.owner; S.f.status = "open"; } closeDrawer(); return render(); }
+  if(el.dataset.more){ S.limit[el.dataset.more] = (S.limit[el.dataset.more] || ({focus:12,todos:25,meetings:40})[el.dataset.more]) * 2; return render(); }
+  if(el.dataset.close !== undefined){ S.currentMeeting = null; return closeDrawer(); }
+  if(el.dataset.todo){
+    try{ const r = await api("/api/decision", {kind:"todo", id:el.dataset.todo, action:el.dataset.action}); S.snap.decisions = r.decisions; }
+    catch(e){ return toast("Could not save: " + e.message); }
+    const drawerOpen = !!$("#drawerHost .drawer");
+    render(); if(drawerOpen && S.currentMeeting) openMeeting(S.currentMeeting);
+    return toast({done:"Marked done. Apply to close it in the vault.", snooze:"Snoozed for 7 days", not_mine:"Marked not mine", keep:"Keeping it open", clear:"Cleared"}[el.dataset.action]);
+  }
+  if(el.dataset.mconf){
+    try{ const r = await api("/api/decision", {kind:"meeting", id:el.dataset.id, action:el.dataset.mconf}); S.snap.decisions = r.decisions; }
+    catch(e){ return toast("Could not save: " + e.message); }
+    render(); openMeeting(el.dataset.id); return;
+  }
+  if(el.dataset.load){
+    const box = $("#noteBox"); box.innerHTML = `<div class="meta">Loading…</div>`;
+    try{ const r = await api("/api/note?file=" + encodeURIComponent(el.dataset.load)); box.innerHTML = `<pre class="note">${esc(r.text)}</pre>`; }
+    catch(e){ box.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+    return;
+  }
+  if(el.dataset.meeting){ S.currentMeeting = el.dataset.meeting; return openMeeting(el.dataset.meeting); }
+});
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeDrawer(); });
+document.addEventListener("change", e => {
+  const map = {fOwner:"owner", fStatus:"status", fSrc:"src", fMs:"mstatus"};
+  if(map[e.target.id]){ S.f[map[e.target.id]] = e.target.value; S.limit = {}; render(); }
+});
+let qT; document.addEventListener("input", e => { if(e.target.id === "fQ"){ clearTimeout(qT); qT = setTimeout(() => { S.f.q = e.target.value; render(); const i = $("#fQ"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 200); } });
+$("#refresh").onclick = () => load(true);
+$("#apply").onclick = async () => {
+  const b = $("#apply"); b.disabled = true; b.textContent = "Applying…";
+  try{ const r = await api("/api/apply", {}); toast(`Closed ${r.applied.length} in the vault`); console.log(r.log.join("\n")); }
+  catch(e){ toast("Apply failed: " + e.message); }
+  load(true);
+};
+
+async function load(force){
+  try{
+    S.snap = await api("/api/snapshot" + (force ? "?refresh=1" : ""));
+    S.idx = {todos:Object.fromEntries(S.snap.todos.map(t=>[t.id,t])), meetings:Object.fromEntries(S.snap.meetings.map(m=>[m.id,m]))};
+    render();
+  }catch(e){ $("#main").innerHTML = `<div class="err">Could not read the vault: ${esc(e.message)}</div>`; }
+}
+try{ S.tab = localStorage.getItem("t360.tab") || "focus"; Object.assign(S.f, JSON.parse(localStorage.getItem("t360.f") || "{}")); }catch(e){}
+load(false);
+</script>
+</body>
+</html>
