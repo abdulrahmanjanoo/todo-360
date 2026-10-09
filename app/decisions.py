@@ -3,6 +3,7 @@
 Store: _data/decisions.json
   todos:    {T-id: {action: done|snooze|not_mine|keep, until?, note?, at, applied?}}
   meetings: {meeting-id: {confirmed: happened|did_not_happen, note?, at}}
+  money:    {T-id or meeting-id: {verdict: yes|no, at}}   Abdul's override of the #revenue tag
 
 Applying a `done`:
   1. tick `- [ ] T-xxxx` -> `- [x] T-xxxx` wherever the vault shows that todo, then
@@ -25,6 +26,7 @@ PATH = os.path.join(DATA, "decisions.json")
 _lock = threading.Lock()
 TODO_ACTIONS = {"done", "snooze", "not_mine", "keep", "clear"}
 MEETING_ACTIONS = {"happened", "did_not_happen", "clear"}
+MONEY_ACTIONS = {"yes", "no", "clear"}
 
 
 def load():
@@ -35,6 +37,7 @@ def load():
         d = {}
     d.setdefault("todos", {})
     d.setdefault("meetings", {})
+    d.setdefault("money", {})
     return d
 
 
@@ -74,6 +77,13 @@ def record(kind, item_id, action, until=None, note=None):
                 d["meetings"].pop(item_id, None)
             else:
                 d["meetings"][item_id] = {"confirmed": action, "at": now(), **({"note": note[:500]} if note else {})}
+        elif kind == "money":
+            if action not in MONEY_ACTIONS:
+                raise ValueError("bad action")
+            if action == "clear":
+                d["money"].pop(item_id, None)
+            else:
+                d["money"][item_id] = {"verdict": action, "at": now()}
         else:
             raise ValueError("bad kind")
         save(d)

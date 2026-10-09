@@ -4,126 +4,292 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Janoo To-Do 360</title>
+<meta name="description" content="Every to-do and meeting from the Obsidian wiki, the revenue ones first.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='9' stroke='%230A84FF' stroke-width='2'/%3E%3Cpath d='M8 12.5l2.6 2.5L16 9.5' stroke='%230A84FF' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
-/* Layout: one column desk. Sticky header with counts, tab row, list on the left, detail drawer slides over on the right. */
+/* Design system = Apple Health's, shared with Janoo Health 360: iOS system colours, SF Pro Dynamic Type at Large,
+   inset-grouped cards (12pt radius, no border, no shadow), one hue per card. Dark follows the system; a switch overrides. */
 :root{
-  --bg:#f5f6f8; --surface:#ffffff; --surface-2:#eef0f4; --line:#dfe3ea;
-  --fg:#16191f; --muted:#5d6574; --faint:#8a92a1;
-  --accent:#2457d6; --accent-soft:#e3eafc;
-  --good:#1f8a4c; --good-soft:#e2f4ea; --warn:#a86400; --warn-soft:#fbf0dc; --bad:#c23b32; --bad-soft:#fbe5e3;
-  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
-  --r:10px;
+  --bg:#000000; --card:#1C1C1E; --fill:#2C2C2E; --fill-2:#3A3A3C;
+  --label:#FFFFFF; --label-2:rgba(235,235,245,.6); --label-3:rgba(235,235,245,.3); --label-4:rgba(235,235,245,.18);
+  --sep:rgba(84,84,88,.6); --blue:#0A84FF; --accent-dim:rgba(10,132,255,.18);
+  --red:#FF453A; --amber:#FF9F0A; --green:#30D158; --grey:#8E8E93;
+  --c-money:#30D158; --c-you:#0A84FF; --c-new:#64D2FF; --c-old:#FF9F0A; --c-meet:#BF5AF2; --c-gap:#FF453A;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Inter,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --radius:12px; --radius-s:8px; --gap:12px; --gutter:20px;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#101216; --surface:#181b21; --surface-2:#20242c; --line:#2c313b;
-  --fg:#e9ebef; --muted:#a2a9b6; --faint:#737b89;
-  --accent:#7aa2ff; --accent-soft:#1d2a4a;
-  --good:#5fd08d; --good-soft:#173324; --warn:#f0b35a; --warn-soft:#3a2b12; --bad:#ff7d73; --bad-soft:#3d1c1a; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#101216; --surface:#181b21; --surface-2:#20242c; --line:#2c313b;
-  --fg:#e9ebef; --muted:#a2a9b6; --faint:#737b89;
-  --accent:#7aa2ff; --accent-soft:#1d2a4a;
-  --good:#5fd08d; --good-soft:#173324; --warn:#f0b35a; --warn-soft:#3a2b12; --bad:#ff7d73; --bad-soft:#3d1c1a; color-scheme:dark}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#F2F2F7; --card:#FFFFFF; --fill:rgba(118,118,128,.12); --fill-2:rgba(118,118,128,.16);
+    --label:#000000; --label-2:rgba(60,60,67,.6); --label-3:rgba(60,60,67,.3); --label-4:rgba(60,60,67,.18);
+    --sep:rgba(60,60,67,.29); --blue:#007AFF; --accent-dim:rgba(0,122,255,.12);
+    --red:#FF3B30; --amber:#FF9500; --green:#34C759; --grey:#8E8E93;
+    --c-money:#34C759; --c-you:#007AFF; --c-new:#32ADE6; --c-old:#FF9500; --c-meet:#AF52DE; --c-gap:#FF3B30;
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#F2F2F7; --card:#FFFFFF; --fill:rgba(118,118,128,.12); --fill-2:rgba(118,118,128,.16);
+  --label:#000000; --label-2:rgba(60,60,67,.6); --label-3:rgba(60,60,67,.3); --label-4:rgba(60,60,67,.18);
+  --sep:rgba(60,60,67,.29); --blue:#007AFF; --accent-dim:rgba(0,122,255,.12);
+  --red:#FF3B30; --amber:#FF9500; --green:#34C759; --grey:#8E8E93;
+  --c-money:#34C759; --c-you:#007AFF; --c-new:#32ADE6; --c-old:#FF9500; --c-meet:#AF52DE; --c-gap:#FF3B30;
+  color-scheme:light;
+}
 *{box-sizing:border-box}
-html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--font)}
-a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
-button{font:inherit;color:inherit;cursor:pointer}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
-.wrap{max-width:1100px;margin:0 auto;padding-inline:20px}
-.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:14px 10px}
-.brand{font-size:19px;font-weight:650;letter-spacing:-.01em}
-.brand small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
-.spacer{flex:1}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px}
-.btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn[disabled]{opacity:.5;cursor:default}
-.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:8px}
-.tab{border:0;background:none;padding:6px 12px;border-radius:999px;color:var(--muted);white-space:nowrap}
-.tab[aria-selected="true"]{background:var(--surface-2);color:var(--fg);font-weight:600}
-.tab .n{font-variant-numeric:tabular-nums;color:var(--faint);margin-left:4px}
-main{padding-block:18px 60px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:22px}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;text-align:left}
-.kpi b{display:block;font-size:24px;font-weight:650;font-variant-numeric:tabular-nums}
-.kpi span{color:var(--muted);font-size:12.5px}
-.kpi.warn b{color:var(--warn)} .kpi.bad b{color:var(--bad)} .kpi.good b{color:var(--good)}
-h2{font-size:15px;margin:22px 0 8px;display:flex;align-items:baseline;gap:8px}
-h2 .sub{font-weight:400;color:var(--muted);font-size:13px}
-.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
-.filters select,.filters input{font:inherit;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
-.filters input{min-width:200px;flex:1}
-.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:10px 14px;border-top:1px solid var(--line)}
-.row:first-child{border-top:0}
-.row.click{cursor:pointer} .row.click:hover{background:var(--surface-2)}
+html{-webkit-text-size-adjust:100%}
+html,body{margin:0;background:var(--bg);color:var(--label);font-family:var(--font);font-size:17px;line-height:22px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+body{background-color:var(--bg)}
+a{color:var(--blue);text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+button:disabled{cursor:default}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px}
+svg{display:block}
+.num{font-variant-numeric:tabular-nums}
+.l2{color:var(--label-2)} .l3{color:var(--label-3)}
+.hide{display:none!important}
+
+/* app bar */
+.appbar{display:flex;align-items:center;gap:18px;padding:10px var(--gutter);position:sticky;top:0;z-index:20;background:var(--bg)}
+.appbar .brand{display:flex;align-items:center;gap:8px;font-size:15px;line-height:20px;font-weight:600;letter-spacing:-.24px;color:var(--label)}
+.appbar .brand svg{width:20px;height:20px}
+.appbar .brand b{color:var(--blue);font-weight:600}
+.appbar nav{display:flex;gap:2px;margin-left:auto;margin-right:auto}
+.appbar nav a{color:var(--label-2);padding:6px 12px;border-radius:8px;font-size:15px;line-height:20px;font-weight:500;letter-spacing:-.24px;white-space:nowrap}
+.appbar nav a[aria-current="page"]{color:var(--blue);font-weight:600}
+.appbar .right{display:flex;align-items:center;gap:8px}
+.appbar .meta{color:var(--label-2);font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;background:var(--fill);color:var(--blue);border-radius:999px;padding:7px 14px;font-size:15px;line-height:20px;font-weight:600;letter-spacing:-.24px;cursor:pointer;font-family:var(--font);white-space:nowrap}
+.btn.primary{background:var(--blue);color:#fff}
+.btn:disabled{color:var(--label-3);background:var(--fill)}
+.btn:active{opacity:.7}
+
+/* page */
+.page{max-width:1120px;margin:0 auto;padding:8px var(--gutter) 80px}
+.lt{font-size:34px;line-height:41px;font-weight:700;letter-spacing:.37px;margin:8px 0 0}
+.lt-sub{font-size:15px;line-height:20px;color:var(--label-2);margin:2px 0 20px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--gap)}
+.c4{grid-column:span 4} .c6{grid-column:span 6} .c12{grid-column:span 12}
+@media (max-width:900px){.c4{grid-column:span 6}}
+@media (max-width:600px){.c4,.c6{grid-column:span 12}}
+.sec-h{display:flex;align-items:baseline;gap:8px;margin:28px 0 8px;font-size:22px;line-height:28px;font-weight:700;letter-spacing:.35px}
+.sec-h .sub{font-size:15px;line-height:20px;font-weight:400;color:var(--label-2);margin-left:auto}
+.sec-h a.sub{color:var(--blue)}
+
+/* inset-grouped card */
+.card{background:var(--card);border:0;border-radius:var(--radius);box-shadow:none;min-width:0}
+.card .hd{display:flex;align-items:center;gap:6px;padding:14px 16px 0}
+.card .hd h2{margin:0;font-size:15px;line-height:20px;font-weight:600;letter-spacing:-.24px;display:flex;align-items:center;gap:6px}
+.card .hd h2 svg{width:18px;height:18px}
+.card .hd .when{margin-left:auto;color:var(--label-2);font-size:15px;line-height:20px;display:flex;align-items:center;gap:2px}
+.card .hd .when svg{width:14px;height:14px;color:var(--label-3)}
+.card .bd{padding:8px 16px 16px}
+/* pinned metric card: whole card is the link */
+.metric{display:block;width:100%;color:var(--label)}
+.metric .hd h2{color:var(--hue)}
+.metric .val{font-size:34px;line-height:41px;font-weight:700;letter-spacing:.37px;display:flex;align-items:baseline;gap:6px}
+.metric .val small{font-size:15px;line-height:20px;font-weight:400;color:var(--label-2);letter-spacing:-.24px}
+.metric .fact{font-size:13px;line-height:18px;color:var(--label-2);letter-spacing:-.08px;margin-top:4px}
+.metric:active{opacity:.7}
+/* highlight card: one sentence, Apple's "Highlights" voice */
+.hl{font-size:17px;line-height:22px;letter-spacing:-.41px}
+.hl b{font-weight:600}
+.hl .fact{font-size:13px;line-height:18px;color:var(--label-2);margin-top:6px}
+.bar{height:6px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:12px}
+.bar i{display:block;height:100%;background:var(--hue,var(--blue));border-radius:3px}
+
+/* list card rows */
+.list{padding:0}
+.list .row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:11px 16px;min-height:52px}
+.list .row + .row{position:relative}
+.list .row + .row::before{content:"";position:absolute;left:16px;right:0;top:0;height:1px;background:var(--sep)}
+.list .row.has-lead + .row.has-lead::before{left:52px}
+.row .t{font-size:17px;line-height:22px;letter-spacing:-.41px;overflow-wrap:anywhere}
+.row .s{font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--label-2);display:flex;flex-wrap:wrap;gap:2px 8px;margin-top:2px;align-items:center}
+.row .s a{color:var(--label-2)}
+.row .s a:hover{color:var(--blue)}
 .row .main{min-width:0}
-.row .t{overflow-wrap:anywhere}
-.meta{color:var(--muted);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px}
-.meta a{color:var(--muted);text-decoration:underline;text-decoration-color:var(--line)}
-.id{font:12px var(--mono);color:var(--faint)}
-.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
-.pill.good{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
-.pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.acc{background:var(--accent-soft);color:var(--accent)}
-.acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
-.act{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:3px 8px;font-size:12.5px;color:var(--muted)}
-.act:hover{color:var(--fg);border-color:var(--muted)}
-.act.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
-.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--faint)}
-.dot.good{background:var(--good)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)} .dot.acc{background:var(--accent)}
-.group{padding:8px 14px;background:var(--surface-2);font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
-.group:first-child{border-top:0}
-.group a{font-weight:600;color:var(--fg)}
-.more{display:block;width:100%;border:0;border-top:1px solid var(--line);background:none;padding:10px;color:var(--accent)}
-.empty{padding:28px 16px;text-align:center;color:var(--muted)}
-.check{display:grid;grid-template-columns:repeat(5,auto);gap:6px;justify-content:start}
-/* drawer */
-.scrim{position:fixed;inset:0;background:rgba(10,12,16,.35);z-index:9}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--surface);z-index:10;border-left:1px solid var(--line);display:flex;flex-direction:column}
-.drawer .hd{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
-.drawer .hd h3{margin:0;font-size:17px;text-wrap:balance}
-.drawer .bd{padding:16px 20px 40px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
-.links{display:flex;flex-wrap:wrap;gap:6px}
-.links a,.links span.off{border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px}
-.links span.off{color:var(--faint)}
-.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:13px}
-.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
-.sec h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.sec ul{margin:0;padding-left:18px}
-pre.note{white-space:pre-wrap;font:12.5px/1.5 var(--mono);background:var(--surface-2);border-radius:8px;padding:12px;max-height:60vh;overflow:auto;margin:0}
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:20;font-size:13px}
-.err{background:var(--bad-soft);color:var(--bad);padding:12px 14px;border-radius:var(--r);margin-bottom:12px}
-@media (max-width:640px){.row{grid-template-columns:auto 1fr}.row .acts{grid-column:2;justify-content:flex-start}.kv{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
+.row.decided .main{opacity:.55}  /* decided on this screen: stays until the filters change */
+.row .trail{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.row.link .trail{flex-wrap:nowrap}
+.row.link{cursor:pointer;color:var(--label)}
+.row.link .t{color:var(--label)}
+/* row actions stay quiet until the pointer is on the row; always visible on touch screens */
+/* One behaviour on every screen (Reminders): a row is title + subline; a "···" chip at the right opens the actions
+   under the row. The chip is always there on touch screens and appears on hover with a pointer. Nothing reflows. */
+.list .row:not(.link){position:relative;grid-template-columns:auto 1fr}
+.list .row:not(.link) .main{padding-right:44px}
+.list .row:not(.link) .trail{display:none;grid-column:2/-1;justify-content:flex-start;padding-top:2px}  /* opens aligned with the title, like iOS disclosed content */
+.list .row.open:not(.link) .trail{display:flex}
+.more-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:44px;height:44px;padding:6px;border-radius:50%;background:var(--fill);background-clip:content-box;color:var(--label-2);display:grid;place-items:center;font-weight:700;letter-spacing:1px;font-size:15px;line-height:1;transition:opacity .15s ease-out}
+.more-btn.hide{display:none}
+.row.open .more-btn{color:var(--blue)}
+.circ{position:relative}
+.circ::before{content:"";position:absolute;inset:-10px}  /* 44pt hit area around a 24pt circle */
+/* the sheet's rows are settings rows: their one control is always visible, no chip */
+.sheet .list .row:not(.link){grid-template-columns:auto 1fr auto}
+.sheet .list .row:not(.link) .main{padding-right:0}
+.sheet .list .row:not(.link) .trail{display:flex;grid-column:auto;padding-top:0}
+.sheet .more-btn{display:none}
+@media (hover:hover){
+  .more-btn{opacity:0}
+  .list .row:not(.link):hover .more-btn,.list .row:not(.link):focus-within .more-btn,.row.open .more-btn{opacity:1}
+}
+.row.link:hover{background:color-mix(in srgb,var(--label) 4%,transparent)}
+.row.link:first-child:hover{border-radius:var(--radius) var(--radius) 0 0}
+.row.link:last-child:hover{border-radius:0 0 var(--radius) var(--radius)}
+.row.link:only-child:hover{border-radius:var(--radius)}
+.chev{width:14px;height:14px;color:var(--label-3);flex:none}
+.group-h{padding:16px 16px 4px;font-size:13px;line-height:18px;color:var(--label-2);text-transform:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.group-h a{font-weight:600;color:var(--label);font-size:15px;line-height:20px;letter-spacing:-.24px}
+.group-h a:hover{color:var(--blue)}
+.group-h + .row::before{display:none}
+.empty{padding:24px 16px;color:var(--label-2);font-size:15px;line-height:20px;text-align:center}
+.more{display:block;width:100%;padding:12px 16px;color:var(--blue);font-size:15px;line-height:20px;font-weight:600;text-align:center;border-top:1px solid var(--sep)}
+/* reminders-style completion circle */
+.circ{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--label-3);display:grid;place-items:center;flex:none;color:transparent;transition:background .15s ease-out,border-color .15s ease-out}
+.circ svg{width:12px;height:12px}
+.circ.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.circ.locked{border-style:dashed;cursor:default}
+.circ:hover:not(.locked){border-color:var(--blue)}
+/* tags and pills: one status pill per row, in words */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:12px;line-height:16px;font-weight:600;color:var(--label-2);background:var(--fill);white-space:nowrap}
+.pill.green{color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent)}
+.pill.amber{color:var(--amber);background:color-mix(in srgb,var(--amber) 16%,transparent)}
+.pill.red{color:var(--red);background:color-mix(in srgb,var(--red) 14%,transparent)}
+.pill.blue{color:var(--blue);background:var(--accent-dim)}
+.pill.money{color:var(--c-money);background:color-mix(in srgb,var(--c-money) 14%,transparent);cursor:pointer}
+.pill.money svg{width:11px;height:11px}
+.why{display:inline-flex;align-items:center;gap:4px}
+.why svg{width:11px;height:11px;color:var(--c-money)}
+/* quiet row actions */
+.act{padding:4px 10px;border-radius:999px;font-size:13px;line-height:18px;font-weight:500;color:var(--label-2);background:var(--fill);white-space:nowrap}
+@media (hover:none){.act{padding:8px 14px}.circ{width:28px;height:28px}.circ::before{inset:-8px}}
+.act:hover{color:var(--blue)}
+.act.on{color:var(--blue);background:var(--accent-dim);font-weight:600}
+
+/* controls: iOS search field and segmented controls */
+.controls{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.controls .line{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search{display:flex;align-items:center;gap:6px;background:var(--fill);border-radius:10px;padding:7px 10px;flex:1;min-width:220px}
+.search svg{width:16px;height:16px;color:var(--label-2);flex:none}
+.search input{flex:1;background:none;border:0;color:var(--label);font:inherit;font-size:17px;line-height:22px;letter-spacing:-.41px;min-width:0}
+.search input:focus{outline:0}
+.search input::placeholder{color:var(--label-2)}
+.seg{display:inline-flex;background:var(--fill);border-radius:9px;padding:2px;gap:2px}
+.seg button{padding:5px 12px;border-radius:7px;font-size:13px;line-height:18px;font-weight:500;color:var(--label);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--card);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+:root[data-theme="light"] .seg button[aria-pressed="true"],:root:not([data-theme="dark"]) .seg button[aria-pressed="true"]{background:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{background:#636366}}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{background:#636366}
+.toggle{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--fill);font-size:13px;line-height:18px;font-weight:600;color:var(--label-2)}
+.toggle svg{width:14px;height:14px}
+.toggle[aria-pressed="true"]{background:color-mix(in srgb,var(--c-money) 16%,transparent);color:var(--c-money)}
+
+/* sheet (meeting detail) */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:29}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(680px,100%);background:var(--bg);z-index:30;display:flex;flex-direction:column;overflow:hidden}
+.sheet .top{display:flex;align-items:center;gap:12px;padding:14px var(--gutter) 10px;position:sticky;top:0;background:var(--bg)}
+.sheet .top h2{margin:0;font-size:22px;line-height:28px;font-weight:700;letter-spacing:.35px;flex:1;min-width:0;text-wrap:balance}
+.sheet .top .done{color:var(--blue);font-size:17px;line-height:22px;font-weight:600;flex:none}
+.sheet .sub{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 var(--gutter) 12px;font-size:15px;line-height:20px;color:var(--label-2)}
+.sheet .body{overflow-y:auto;padding:0 var(--gutter) 60px;display:flex;flex-direction:column;gap:16px}
+.sheet h3{margin:0;padding:0 16px 6px;font-size:13px;line-height:18px;font-weight:400;color:var(--label-2);text-transform:uppercase;letter-spacing:.06px}
+.kv .row{min-height:44px;padding:10px 16px}
+.kv .row .k{font-size:15px;line-height:20px;color:var(--label)}
+.kv .row .v{font-size:15px;line-height:20px;color:var(--label-2);text-align:right;overflow-wrap:anywhere}
+.kv .row .v.id{font-family:var(--mono);font-size:13px}
+.linkrow{color:var(--label)}
+.linkrow.off{color:var(--label-3);cursor:default}
+.linkrow .ext{width:14px;height:14px;color:var(--label-3)}
+pre.note{white-space:pre-wrap;font:13px/18px var(--mono);background:var(--card);border-radius:var(--radius);padding:14px 16px;max-height:60vh;overflow:auto;margin:0;color:var(--label)}
+ul.tk{margin:0;padding:4px 16px 12px 32px;font-size:15px;line-height:20px}
+ul.tk li{margin:4px 0}
+.note{font-size:15px;line-height:20px;padding:4px 16px 12px}
+.err{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red);padding:12px 16px;border-radius:var(--radius);font-size:15px;line-height:20px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card);color:var(--label);padding:10px 16px;border-radius:999px;z-index:40;font-size:15px;line-height:20px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+@media (prefers-reduced-motion:no-preference){
+  .sheet{animation:slide .2s ease-out}
+  @keyframes slide{from{transform:translateX(32px);opacity:0}}
+  .scrim{animation:fade .2s ease-out}
+  @keyframes fade{from{opacity:0}}
+  .toast{animation:fade .2s ease-out}
+}
+@media (max-width:700px){
+  /* iOS: tabs in a bottom tab bar, one primary action in the top bar */
+  .appbar{gap:10px;padding:8px 16px}
+  .appbar nav{position:fixed;bottom:0;left:0;right:0;z-index:20;margin:0;justify-content:space-around;padding:8px 8px 22px;background:var(--card);border-top:1px solid var(--sep)}
+  .appbar nav a{font-size:12px;line-height:16px;padding:4px 10px}
+  .appbar .meta,.appbar #refresh,.appbar #theme,.appbar #apply:disabled{display:none}
+  .appbar .right{margin-left:auto}
+  .page{padding-inline:16px;padding-bottom:110px}
+  .sec-h{flex-wrap:wrap}
+  .sec-h .sub{width:100%;margin-left:0}
+  /* control rows bleed into the gutter and fade at the edge, so the next control is visibly there */
+  .controls .line{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0 16px 2px;margin-inline:-16px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+  .controls .line::after{content:"";flex:none;width:16px}
+  .seg{flex:none}
+  .sheet .body{padding-bottom:110px}
+}
 </style>
+<script>(function(){try{var t=localStorage.getItem('t360-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="top">
-      <div class="brand">To-Do 360<small id="sub">Reading your Obsidian vault…</small></div>
-      <div class="spacer"></div>
-      <button class="btn" id="refresh" title="Re-read the vault">Refresh</button>
-      <button class="btn primary" id="apply" disabled title="Close the to-dos you marked done, in the vault">Apply 0 to vault</button>
-    </div>
-    <nav class="tabs" role="tablist" id="tabs"></nav>
+<header class="appbar">
+  <a class="brand" href="#/"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="var(--blue)" stroke-width="2"/><path d="M8 12.5l2.6 2.5L16 9.5" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Janoo <b>To-Do</b> 360</span></a>
+  <nav id="nav"><a href="#/">Focus</a><a href="#/todos">To-dos</a><a href="#/meetings">Meetings</a><a href="#/gaps">Gaps</a></nav>
+  <div class="right">
+    <span class="meta" id="meta"></span>
+    <button class="btn" id="refresh" type="button" title="Read the vault again">Refresh</button>
+    <button class="btn primary" id="apply" type="button" disabled>Apply to vault</button>
+    <button class="btn" id="theme" type="button">Light</button>
   </div>
 </header>
-<main class="wrap" id="main"><div class="empty">Loading…</div></main>
-<div id="drawerHost"></div>
+<main class="page" id="main"><div class="empty">Reading your vault…</div></main>
+<div id="sheetHost"></div>
 
 <script>
 "use strict";
-const S = {snap:null, tab:"focus", f:{owner:"me", status:"open", q:"", src:"all", mstatus:"all"}, limit:{}};
+/* ---------- state ---------- */
+const S = {snap:null, idx:null, tab:"focus", sheet:null, recent:new Set(),  // recent: ids decided on this screen, kept visible
+  f:{owner:"me", status:"open", money:false, age:"all", q:"", src:"all", mstatus:"all"}, limit:{}};
 const $ = (s, el=document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const fmtDate = iso => { if(!iso) return "—"; const [y,m,d] = iso.split("-").map(Number); const now = new Date();
-  return d + " " + MONTHS[m-1] + (y !== now.getFullYear() ? " " + y : ""); };
-const daysAgo = iso => { if(!iso) return null; return Math.round((new Date(S.snap.today) - new Date(iso)) / 864e5); };
+const MONTHS_L = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const I = {
+  chev:'<svg class="chev" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  money:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>',
+  you:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-3.5 3.6-6 8-6s8 2.5 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4l9 16H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  ext:'<svg class="ext" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+/* ---------- dates, Apple style: Today / Yesterday / weekday / 6 Oct ---------- */
+function parseISO(iso){ const [y,m,d] = iso.split("-").map(Number); return new Date(y, m-1, d); }
+function when(iso){
+  if(!iso) return "—";
+  const d = parseISO(iso.slice(0,10)), t = parseISO(S.snap.today);
+  const diff = Math.round((t - d) / 864e5);
+  if(diff === 0) return "Today"; if(diff === 1) return "Yesterday"; if(diff === -1) return "Tomorrow";
+  if(diff > 1 && diff < 7) return DAYS[d.getDay()];
+  return d.getDate() + " " + MONTHS[d.getMonth()] + (d.getFullYear() !== t.getFullYear() ? " " + d.getFullYear() : "");
+}
+function longToday(){ const d = parseISO(S.snap.today); return DAYS[d.getDay()] + ", " + d.getDate() + " " + MONTHS_L[d.getMonth()]; }
+/* "19:41 IST" -> "7:41 PM" (Apple's clock voice; the zone is always Abdul's) */
+function clock(s){ const m = /^(\d{1,2}):(\d{2})/.exec(s || ""); if(!m) return ""; const h = +m[1]; return ((h % 12) || 12) + ":" + m[2] + (h < 12 ? " AM" : " PM"); }
+function whenAt(iso, start){ const c = clock(start); return when(iso) + (c ? ", " + c : ""); }
+const readAt = () => new Date(S.snap.generated).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+function daysAgo(iso){ return iso ? Math.round((parseISO(S.snap.today) - parseISO(iso.slice(0,10))) / 864e5) : null; }
+function ageWords(n){ if(n == null) return ""; if(n === 0) return "today"; if(n === 1) return "1 day"; if(n < 14) return n + " days"; if(n < 60) return Math.round(n/7) + " weeks"; return Math.round(n/30) + " months"; }
 const obsidian = rel => rel ? "obsidian://open?vault=" + encodeURIComponent(S.snap.vault_name) + "&file=" + encodeURIComponent(rel.replace(/\.md$/,"")) : "";
 
 async function api(path, body){
@@ -132,236 +298,356 @@ async function api(path, body){
   if(!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
-function toast(msg){ const t = document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(), 2600); }
+function toast(msg){ document.querySelectorAll(".toast").forEach(x => x.remove()); const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 2400); }
 
-/* ---------- derived state ---------- */
-function decisionOf(t){ return S.snap.decisions.todos[t.id] || null; }
+/* ---------- derived ---------- */
+const decisionOf = t => S.snap.decisions.todos[t.id] || null;
 function effective(t){
   const d = decisionOf(t);
   if(t.status !== "open") return t.status;
   if(!d) return "open";
   if(d.action === "snooze") return (d.until && d.until > S.snap.today) ? "snoozed" : "open";
-  return d.action; // done | not_mine | keep
+  return d.action;
 }
-function ownerKind(t){
-  if(!t.owner) return "unowned";
-  if(t.owner === S.snap.me) return "me";
-  return t.owner_title.startsWith("m/Tericsoft/") ? "team" : "external";
-}
-function meetingById(id){ return S.idx.meetings[id]; }
-function pendingApply(){ return Object.entries(S.snap.decisions.todos).filter(([id,d]) => d.action==="done" && !d.applied && S.idx.todos[id]?.status==="open").length; }
+function isMoney(x){ const o = S.snap.decisions.money[x.id]; return o ? o.verdict === "yes" : !!x.money; }
+function ownerKind(t){ if(!t.owner) return "unowned"; if(t.owner === S.snap.me) return "me"; return t.owner_title.startsWith("m/Tericsoft/") ? "team" : "external"; }
+const meetingById = id => S.idx.meetings[id];
+const openTodos = () => S.snap.todos.filter(t => effective(t) === "open");
+const pendingApply = () => Object.entries(S.snap.decisions.todos).filter(([id,d]) => d.action === "done" && !d.applied && S.idx.todos[id]?.status === "open").length;
 function meetingState(m){
   const conf = S.snap.decisions.meetings[m.id];
-  if(m.status !== "captured") return {cls: m.status==="skipped" ? "bad" : "warn", label: {skipped:"Not captured", deferred:"Waiting at source", not_extracted:"Not processed"}[m.status]};
-  if(!m.airtable) return {cls:"warn", label:"No Airtable row"};
-  if(conf?.confirmed === "did_not_happen") return {cls:"bad", label:"Didn't happen"};
-  if(conf?.confirmed === "happened") return {cls:"good", label:"Confirmed"};
-  return {cls:"acc", label:"Captured"};
+  if(m.status !== "captured") return {cls: m.status === "skipped" ? "red" : "amber", label: {skipped:"Not captured", deferred:"Waiting at source", not_extracted:"Not processed"}[m.status]};
+  if(conf?.confirmed === "did_not_happen") return {cls:"red", label:"Did not happen"};
+  if(!m.airtable) return {cls:"amber", label:"No Airtable row"};
+  if(conf?.confirmed === "happened") return {cls:"green", label:"Confirmed"};
+  return {cls:"blue", label:"Captured"};
 }
+function gaps(){
+  const failed = S.snap.meetings.filter(m => m.status !== "captured");
+  const noAt = S.snap.meetings.filter(m => m.status === "captured" && !m.airtable);
+  const unowned = S.snap.todos.filter(t => t.status === "open" && !t.owner).length;
+  return {failed, noAt, lint:S.snap.lint, unowned, total: failed.filter(m => m.status !== "skipped").length + noAt.length + S.snap.lint.length};
+}
+
+/* ---------- routing ---------- */
+function route(){
+  const h = location.hash || "#/", prevTab = S.tab;
+  const [path, query] = h.split("?");
+  const parts = path.slice(2).split("/");
+  if(parts[0] === "meeting" && parts[1]){ S.sheet = decodeURIComponent(parts.slice(1).join("/")); }
+  else { S.sheet = null; S.tab = {"":"focus", todos:"todos", meetings:"meetings", gaps:"gaps"}[parts[0]] ?? "focus"; }
+  const p = new URLSearchParams(query || "");
+  if(p.has("owner")){ S.f.owner = p.get("owner"); S.f.status = "open"; }
+  if(p.has("money")){ S.f.money = p.get("money") === "1"; }
+  if(p.has("age")){ S.f.age = p.get("age"); }
+  if(p.has("mstatus")){ S.f.mstatus = p.get("mstatus"); }
+  if(p.has("q")){ S.f.q = p.get("q"); }
+  if(!S.sheet){ S.recent.clear(); if(S.tab !== prevTab) window.scrollTo(0, 0); }
+  render();
+}
+const go = (tab, params) => { location.hash = "#/" + (tab === "focus" ? "" : tab) + (params ? "?" + new URLSearchParams(params) : ""); };
 
 /* ---------- render ---------- */
-const TABS = [["focus","Focus"],["todos","To-dos"],["meetings","Meetings"],["gaps","Gaps"]];
-function renderTabs(){
-  const open = S.snap.todos.filter(t => effective(t)==="open");
-  const n = {focus:"", todos: open.length, meetings: S.snap.meetings.length, gaps: gaps().total};
-  $("#tabs").innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${l}${n[k]!==""?`<span class="n">${n[k]}</span>`:""}</button>`).join("");
-  const p = pendingApply();
-  const b = $("#apply"); b.disabled = !p; b.textContent = `Apply ${p} to vault`;
-  $("#sub").textContent = `${S.snap.vault_name} · read ${new Date(S.snap.generated).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})}`;
-}
 function render(){
-  renderTabs();
-  const m = $("#main");
-  m.innerHTML = ({focus:viewFocus, todos:viewTodos, meetings:viewMeetings, gaps:viewGaps})[S.tab]();
-  try{ localStorage.setItem("t360.tab", S.tab); localStorage.setItem("t360.f", JSON.stringify(S.f)); }catch(e){}
+  if(!S.snap) return;
+  document.querySelectorAll("#nav a").forEach(a => {
+    const t = {"#/":"focus","#/todos":"todos","#/meetings":"meetings","#/gaps":"gaps"}[a.getAttribute("href")];
+    if(t === S.tab) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  const p = pendingApply(), b = $("#apply");
+  b.disabled = !p; b.textContent = p ? `Apply ${p} to vault` : "Apply to vault";
+  $("#meta").textContent = "Vault read " + readAt();
+  $("#main").innerHTML = ({focus:viewFocus, todos:viewTodos, meetings:viewMeetings, gaps:viewGaps})[S.tab]();
+  try{ localStorage.setItem("t360.f", JSON.stringify(S.f)); }catch(e){}
+  if(S.sheet) openSheet(S.sheet); else $("#sheetHost").innerHTML = "";
 }
 
+/* three states: automatic (Revenue / Not revenue flips it), overridden by Abdul (Reset to automatic) */
+function moneyAction(x){
+  const o = S.snap.decisions.money[x.id]?.verdict;
+  if(o) return `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="clear" title="Back to the automatic tag">Use automatic</button>`;
+  return x.money
+    ? `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="no" title="Remove the #revenue tag">Remove tag</button>`
+    : `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="yes" title="Tag as revenue">Tag as revenue</button>`;
+}
+/* "Abdul Rahman Janoo to send the deck" -> "Send the deck" when the owner is shown beside it anyway (display only) */
+function verb(t){
+  if(!t.owner) return t.text;
+  const names = [t.owner, t.owner.split(" ")[0]].filter(Boolean);
+  for(const n of names){
+    const pre = n + " to ";
+    if(t.text.startsWith(pre)){ const rest = t.text.slice(pre.length); return rest.charAt(0).toUpperCase() + rest.slice(1); }
+  }
+  return t.text;
+}
+/* the tag, then why, in words on the line itself (never only in a tooltip); "by you" marks an override */
+function moneyPill(x, opts={}){
+  const o = S.snap.decisions.money[x.id]?.verdict;
+  if(o === "no") return `<span class="l3">Not revenue, by you</span>`;
+  if(!isMoney(x)) return "";
+  const why = o === "yes" ? "tagged by you" : (x.money_reasons || []).slice(0, 2).join(", ");
+  const reason = why ? `<span class="l3">${esc(why)}</span>` : "";
+  if(opts.inMoney) return why ? `<span class="l3 why">${I.money}${esc(why)}</span>` : "";  // the view already says revenue; keep the why, anchored by the glyph
+  return `<button class="pill money" type="button" data-money-filter title="Show only revenue to-dos">${I.money}#revenue</button>${reason}`;
+}
 function todoRow(t, opts={}){
   const d = decisionOf(t), e = effective(t), mt = meetingById(t.meeting_id);
-  const age = t.age_days;
-  const dotCls = e==="done" ? "good" : (age!=null && age>30 ? "bad" : age!=null && age>14 ? "warn" : "acc");
-  const actions = t.status==="open" ? [["done","Done"],["snooze","Snooze 7d"],["not_mine","Not mine"],["keep","Keep"]]
-    .map(([a,l]) => `<button class="act ${d?.action===a?"on":""}" data-todo="${esc(t.id)}" data-action="${d?.action===a?"clear":a}">${l}</button>`).join("")
-    : `<span class="pill ${t.status==="closed"?"good":""}">${esc(t.status)}</span>`;
-  const status = d?.action==="done" ? (d.applied ? `<span class="pill good">closed in vault</span>` : `<span class="pill good">done, not applied</span>`)
-    : d?.action==="snooze" ? `<span class="pill">snoozed to ${fmtDate(d.until)}</span>` : d?.action==="not_mine" ? `<span class="pill">not mine</span>` : d?.action==="keep" ? `<span class="pill acc">keeping</span>` : "";
-  return `<div class="row"><span class="dot ${dotCls}"></span><div class="main">
-    <div class="t">${esc(t.text)}</div>
-    <div class="meta"><span class="id">${esc(t.id)}</span>${t.owner?`<span>${esc(t.owner)}</span>`:`<span>no owner</span>`}
-      ${t.tag_short?`<span>${esc(t.tag_short)}</span>`:""}<span>${age!=null?age+"d old":""}</span>
-      ${!opts.noMeeting && mt ? `<a href="#" data-meeting="${esc(mt.id)}">${esc(mt.title)}</a>` : ""} ${status}</div>
-  </div><div class="acts">${actions}</div></div>`;
+  const open = t.status === "open";
+  const done = e === "done";
+  const circle = open
+    ? `<button class="circ ${done ? "on" : ""}" type="button" data-todo="${esc(t.id)}" data-action="${done ? "clear" : "done"}" aria-label="${done ? "Undo done" : "Mark done"}" aria-pressed="${done}">${I.check}</button>`
+    : `<span class="circ on locked" aria-hidden="true">${I.check}</span>`;
+  const status = !open ? `<span class="pill">${esc(t.status === "closed" ? "Closed" : t.status)}</span>`
+    : d?.action === "done" ? `<span class="pill green">${d.applied ? "Closed in vault" : "Done, apply to close"}</span>`
+    : d?.action === "snooze" && e === "snoozed" ? `<span class="pill amber">Snoozed to ${when(d.until)}</span>`
+    : d?.action === "not_mine" ? `<span class="pill">Not mine</span>`
+    : d?.action === "keep" ? `<span class="pill blue">Keeping</span>` : "";
+  const acts = open && !done ? [["snooze","Snooze"],["not_mine","Not mine"],["keep","Keep"]]
+    .map(([a,l]) => `<button class="act ${d?.action === a ? "on" : ""}" type="button" data-todo="${esc(t.id)}" data-action="${d?.action === a ? "clear" : a}">${l}</button>`).join("") : "";
+  const moneyAct = open ? moneyAction(t) : "";
+  const owner = !t.owner ? "No owner" : t.owner === S.snap.me ? "You" : esc(t.owner);
+  const tag = t.tag_short && t.tag_short !== "untagged" ? `<a href="#/todos?q=${encodeURIComponent(t.tag_short)}">${esc(t.tag_short)}</a>` : "";
+  return `<div class="row has-lead ${e !== "open" && S.recent.has(t.id) ? "decided" : ""}" data-id="${esc(t.id)}">${circle}<div class="main">
+    <div class="t">${esc(verb(t))}</div>
+    <div class="s"><span>${owner}</span>${tag}<span>${ageWords(t.age_days)}</span>${moneyPill(t, opts)}
+      ${!opts.noMeeting && mt ? `<a href="#/meeting/${encodeURIComponent(mt.id)}">${esc(mt.title)}</a>` : ""}${status}</div>
+  </div>${open ? `<button class="more-btn" type="button" data-open-row="${esc(t.id)}" aria-label="More actions">···</button>` : `<span class="more-btn hide"></span>`}<div class="trail">${acts}${moneyAct}</div></div>`;
 }
+function meetingRow(m){
+  const st = meetingState(m);
+  const open = m.todo_ids.filter(id => S.idx.todos[id] && effective(S.idx.todos[id]) === "open").length;
+  return `<a class="row link" href="#/meeting/${encodeURIComponent(m.id)}"><span class="hide"></span><div class="main">
+    <div class="t">${esc(m.title)}</div>
+    <div class="s">${moneyPill(m, {inMoney: S.tab === "meetings" && S.f.mstatus === "money"})}<span>${whenAt(m.date, m.start)}</span><span>${m.source === "wisprflow" ? "Wispr Flow" : "Read AI"}</span>
+      ${m.todo_ids.length ? `<span>${open} open of ${m.todo_ids.length} to-dos</span>` : ""}${m.reason ? `<span>${esc(m.reason.slice(0,80))}</span>` : ""}</div>
+  </div><div class="trail"><span class="pill ${st.cls}">${st.label}</span>${I.chev}</div></a>`;
+}
+const metric = (hue, icon, title, value, unit, fact, href, when_) =>
+  `<a class="card metric c4" href="${href}" style="--hue:var(--${hue})"><div class="hd"><h2>${icon}${title}</h2><span class="when">${when_ || readAt()}${I.chev}</span></div>
+   <div class="bd"><div class="val">${value}<small>${unit}</small></div><div class="fact">${fact}</div></div></a>`;
 
 function viewFocus(){
-  const mine = S.snap.todos.filter(t => effective(t)==="open" && ownerKind(t)==="me");
-  const recent = S.snap.meetings.filter(m => daysAgo(m.date) <= 7);
-  const unconfirmed = recent.filter(m => m.status==="captured" && !S.snap.decisions.meetings[m.id]);
+  const open = openTodos(), mine = open.filter(t => ownerKind(t) === "me");
+  const money = open.filter(isMoney), moneyMine = mine.filter(isMoney);
+  const fresh = mine.filter(t => t.age_days != null && t.age_days <= 7).sort((a,b) => a.age_days - b.age_days);
+  const stale = mine.filter(t => t.age_days > 30);
+  const recent = S.snap.meetings.filter(m => daysAgo(m.date) <= 7 && daysAgo(m.date) >= 0);
+  const unconfirmed = recent.filter(m => m.status === "captured" && !S.snap.decisions.meetings[m.id]);
+  const moneyMeetings = recent.filter(isMoney);
   const g = gaps();
-  const stale = mine.filter(t => t.age_days > 30).length;
-  const fresh = mine.filter(t => t.age_days != null && t.age_days <= 7).sort((a,b) => (a.age_days-b.age_days));
-  const lim = S.limit.focus || 12;
-  return `
-  <div class="kpis">
-    <button class="kpi" data-go="todos" data-owner="me">${'<b>'+mine.length+'</b>'}<span>open to-dos on you</span></button>
-    <button class="kpi ${fresh.length?"":"good"}" data-go="todos" data-owner="me">${'<b>'+fresh.length+'</b>'}<span>new this week</span></button>
-    <button class="kpi ${stale?"warn":"good"}" data-go="todos" data-owner="me">${'<b>'+stale+'</b>'}<span>older than 30 days</span></button>
-    <button class="kpi ${unconfirmed.length?"warn":"good"}" data-go="meetings">${'<b>'+unconfirmed.length+'</b>'}<span>meetings this week to confirm</span></button>
-    <button class="kpi ${g.total?"bad":"good"}" data-go="gaps">${'<b>'+g.total+'</b>'}<span>gaps in capture</span></button>
+  const moneyFresh = moneyMine.filter(t => t.age_days <= 7).length;
+  const share = open.length ? Math.round(money.length / open.length * 100) : 0;
+  const list = (rows, empty) => `<div class="card list">${rows.length ? rows.join("") : `<div class="empty">${empty}</div>`}</div>`;
+  // revenue waiting longest: what is slipping; the new list excludes anything already shown there
+  const top = moneyMine.slice().sort((a,b) => (b.age_days ?? 0) - (a.age_days ?? 0)).slice(0, 5);
+  const freshList = fresh.filter(t => !top.includes(t)).slice(0, 5);
+  const newest = arr => arr.length ? when(arr.slice().sort((a,b) => (a.age_days ?? 1e9) - (b.age_days ?? 1e9))[0].created) : "Today";
+  return `<h1 class="lt">Focus</h1><div class="lt-sub">${longToday()}</div>
+  <div class="grid">
+    ${metric("c-money", I.money, "Revenue", moneyMine.length, "to-dos on you", `${money.length} across everyone · ${moneyFresh} new this week`, "#/todos?owner=me&money=1", newest(moneyMine))}
+    ${metric("c-you", I.you, "On you", mine.length, "open to-dos", `${open.length} open across everyone`, "#/todos?owner=me&money=0&age=all", newest(mine))}
+    ${metric("c-new", I.spark, "New this week", fresh.length, "on you", fresh.length ? `Newest from ${when(fresh[0].created)}` : "Nothing new this week", "#/todos?owner=me&money=0&age=new", "7 days")}
+    ${metric("c-old", I.clock, "Older than 30 days", stale.length, "on you", stale.length ? `Oldest is ${ageWords(Math.max(...stale.map(t => t.age_days)))} old` : "Nothing is going stale", "#/todos?owner=me&money=0&age=old", "30 days")}
+    ${metric("c-meet", I.cal, "Meetings this week", recent.length, "captured", `${unconfirmed.length} to confirm · ${moneyMeetings.length} about revenue`, "#/meetings?mstatus=unconfirmed", "7 days")}
+    ${metric("c-gap", I.warn, "Capture gaps", g.total, g.total === 1 ? "gap" : "gaps", g.total ? `${g.noAt.length} without Airtable · ${g.lint.length} failing checks` : "Every meeting landed cleanly", "#/gaps", g.failed.length ? when(g.failed[0].date) : "Today")}
   </div>
-  <h2>New to-dos on you <span class="sub">from the last 7 days, newest first</span></h2>
-  <div class="list">${fresh.length ? fresh.slice(0,lim).map(t=>todoRow(t)).join("") + (fresh.length>lim?`<button class="more" data-more="focus">Show ${Math.min(12,fresh.length-lim)} more</button>`:"") : `<div class="empty">Nothing new on you this week.</div>`}</div>
-  <h2>Meetings this week <span class="sub">tap one to see links, transcript and its to-dos</span></h2>
-  <div class="list">${recent.length ? recent.map(meetingRow).join("") : `<div class="empty">No meetings in the last 7 days.</div>`}</div>`;
+  <div class="sec-h">Highlights</div>
+  <div class="grid">
+    <a class="card metric c6" href="#/todos?owner=me&money=1" style="--hue:var(--c-money)"><div class="hd"><h2>${I.money}Revenue</h2><span class="when">Today${I.chev}</span></div>
+      <div class="bd"><div class="hl">About <b>${share}%</b> of everything open is tied to money. <b>${moneyMine.length}</b> of those are on you.</div>
+      <div class="bar"><i style="width:${share}%"></i></div><div class="hl"><div class="fact">Revenue share of ${open.length} open to-dos</div></div></div></a>
+    <a class="card metric c6" href="#/meetings?mstatus=unconfirmed" style="--hue:var(--c-meet)"><div class="hd"><h2>${I.cal}Meetings</h2><span class="when">7 days${I.chev}</span></div>
+      <div class="bd"><div class="hl">${recent.length ? `<b>${recent.length}</b> meetings captured this week, <b>${moneyMeetings.length}</b> of them about revenue.` : "No meetings captured in the last 7 days."}</div>
+      <div class="hl"><div class="fact">${unconfirmed.length ? `${unconfirmed.length} still waiting for you to confirm they happened` : "All confirmed"}</div></div></div></a>
+  </div>
+  <div class="sec-h">Revenue waiting longest <a class="sub" href="#/todos?owner=me&money=1">See all ${moneyMine.length}</a></div>
+  ${list(top.map(t => todoRow(t, {inMoney:true})), "No open revenue to-dos on you.")}
+  <div class="sec-h">New on you <a class="sub" href="#/todos?owner=me&money=0&age=new">See all ${fresh.length}</a></div>
+  ${list(freshList.map(t => todoRow(t)), "Nothing new on you this week.")}
+  <div class="sec-h">Meetings this week <a class="sub" href="#/meetings">See all ${recent.length}</a></div>
+  ${list(recent.slice(0, 5).map(meetingRow), "No meetings in the last 7 days.")}`;
 }
 
 function filterTodos(){
   const f = S.f, q = f.q.trim().toLowerCase();
   return S.snap.todos.filter(t => {
     const e = effective(t);
-    if(f.status==="open" && e!=="open") return false;
-    if(f.status==="decided" && !["done","not_mine","keep","snoozed"].includes(e)) return false;
-    if(f.status==="closed" && t.status==="open") return false;
-    if(f.owner!=="all" && ownerKind(t)!==f.owner) return false;
-    if(q){ const mt = meetingById(t.meeting_id); const hay = (t.text+" "+t.id+" "+t.tag+" "+t.owner+" "+(mt?.title||"")).toLowerCase(); if(!hay.includes(q)) return false; }
+    if(f.status === "open" && e !== "open" && !S.recent.has(t.id)) return false;
+    if(f.status === "decided" && !["done","not_mine","keep","snoozed"].includes(e)) return false;
+    if(f.status === "closed" && t.status === "open") return false;
+    if(f.owner !== "all" && ownerKind(t) !== f.owner) return false;
+    if(f.money && !isMoney(t)) return false;
+    if(f.age === "new" && !(t.age_days != null && t.age_days <= 7)) return false;
+    if(f.age === "old" && !(t.age_days > 30)) return false;
+    if(q){ const mt = meetingById(t.meeting_id); const hay = (t.text + " " + t.id + " " + t.tag + " " + t.owner + " " + (mt?.title || "")).toLowerCase(); if(!hay.includes(q)) return false; }
     return true;
   });
 }
+const seg = (id, opts, cur) => `<div class="seg" role="group" data-seg="${id}">${opts.map(([v,l]) => `<button type="button" aria-pressed="${cur === v}" data-v="${v}">${l}</button>`).join("")}</div>`;
 function viewTodos(){
   const list = filterTodos();
   const groups = new Map();
   for(const t of list){ const k = t.meeting_id || "~"; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
-  const keys = [...groups.keys()].sort((a,b) => (meetingById(b)?.date||"").localeCompare(meetingById(a)?.date||""));
-  const lim = S.limit.todos || 25;
+  const keys = [...groups.keys()].sort((a,b) => (meetingById(b)?.date || "").localeCompare(meetingById(a)?.date || ""));
+  const lim = S.limit.todos || 20;
   let html = "", shown = 0;
   for(const k of keys){
     if(shown >= lim) break;
     const mt = meetingById(k), ts = groups.get(k);
-    html += `<div class="group">${mt ? `<a href="#" data-meeting="${esc(mt.id)}">${esc(mt.title)}</a><span>${fmtDate(mt.date)}</span><span>${ts.length} to-do${ts.length>1?"s":""}</span>` : `<span>Not linked to a meeting</span><span>${ts.length}</span>`}</div>`;
-    html += ts.map(t => todoRow(t, {noMeeting:true})).join("");
+    html += `<div class="group-h">${mt ? `<a href="#/meeting/${encodeURIComponent(mt.id)}">${esc(mt.title)}</a><span>${when(mt.date)}</span>` : `<a>Not linked to a meeting</a>`}<span>${ts.length} to-do${ts.length > 1 ? "s" : ""}</span></div>`;
+    html += ts.map(t => todoRow(t, {noMeeting:true, inMoney:S.f.money})).join("");
     shown++;
   }
-  return `
-  <div class="filters">
-    <select id="fOwner" aria-label="Owner">${[["me","On me"],["team","Tericsoft team"],["external","External people"],["unowned","No owner"],["all","Everyone"]].map(([v,l])=>`<option value="${v}" ${S.f.owner===v?"selected":""}>${l}</option>`).join("")}</select>
-    <select id="fStatus" aria-label="Status">${[["open","Open, needs a decision"],["decided","Decided by me"],["closed","Closed in vault"],["all","All"]].map(([v,l])=>`<option value="${v}" ${S.f.status===v?"selected":""}>${l}</option>`).join("")}</select>
-    <input id="fQ" type="search" placeholder="Search text, T-id, project, meeting" value="${esc(S.f.q)}">
+  const openCount = openTodos().length, moneyCount = openTodos().filter(isMoney).length;
+  return `<h1 class="lt">To-dos</h1><div class="lt-sub">${openCount} open · ${moneyCount} about revenue</div>
+  <div class="controls">
+    <div class="line"><label class="search">${I.search}<input id="fQ" type="search" placeholder="Search" value="${esc(S.f.q)}" aria-label="Search to-dos"></label>
+      <button class="toggle" type="button" id="fMoney" aria-pressed="${S.f.money}" title="Only to-dos tied to revenue">${I.money}Money</button></div>
+    <div class="line">${seg("owner", [["me","On me"],["team","Team"],["external","External"],["unowned","No owner"],["all","Everyone"]], S.f.owner)}
+      ${seg("status", [["open","Open"],["decided","Decided"],["closed","Closed"],["all","All"]], S.f.status)}
+      ${seg("age", [["all","Any age"],["new","This week"],["old","Over 30 days"]], S.f.age)}</div>
   </div>
-  <h2>${list.length} to-dos <span class="sub">grouped by meeting, newest meeting first</span></h2>
-  <div class="list">${html || `<div class="empty">No to-dos match.</div>`}${keys.length>shown?`<button class="more" data-more="todos">Show more meetings (${keys.length-shown} left)</button>`:""}</div>`;
+  <div class="sec-h" style="margin-top:4px">${list.length} to-do${list.length === 1 ? "" : "s"}<span class="sub">${S.f.money ? "revenue only · " : ""}grouped by meeting, newest first</span></div>
+  <div class="card list">${html || `<div class="empty">${S.f.money ? "No revenue to-dos match. Tag one with Revenue, or widen the filters." : "No to-dos match."}</div>`}${keys.length > shown ? `<button class="more" type="button" data-more="todos">Show ${Math.min(20, keys.length - shown)} more meetings</button>` : ""}</div>`;
 }
 
-function meetingRow(m){
-  const st = meetingState(m);
-  const open = m.todo_ids.filter(id => S.idx.todos[id] && effective(S.idx.todos[id])==="open").length;
-  return `<div class="row click" data-meeting="${esc(m.id)}"><span class="dot ${st.cls}"></span><div class="main">
-    <div class="t">${esc(m.title)}</div>
-    <div class="meta"><span>${fmtDate(m.date)}${m.start?" · "+esc(m.start):""}</span><span>${m.source==="wisprflow"?"Wispr Flow":"Read AI"}</span>
-      ${m.platform?`<span>${esc(m.platform)}</span>`:""}${m.todo_ids.length?`<span>${open} open of ${m.todo_ids.length} to-dos</span>`:""}
-      ${m.reason?`<span>${esc(m.reason.slice(0,90))}</span>`:""}</div>
-  </div><div class="acts"><span class="pill ${st.cls}">${st.label}</span></div></div>`;
-}
 function viewMeetings(){
   const q = S.f.q.trim().toLowerCase();
-  const list = S.snap.meetings.filter(m => (S.f.src==="all" || m.source===S.f.src)
-    && (S.f.mstatus==="all" || (S.f.mstatus==="unconfirmed" ? (m.status==="captured" && !S.snap.decisions.meetings[m.id]) : S.f.mstatus==="problem" ? meetingState(m).cls!=="acc" && meetingState(m).cls!=="good" : true))
-    && (!q || (m.title+" "+m.source_title+" "+m.id+" "+(m.tags||[]).join(" ")).toLowerCase().includes(q)));
+  const list = S.snap.meetings.filter(m => (S.f.src === "all" || m.source === S.f.src)
+    && (S.f.mstatus === "all" || (S.f.mstatus === "unconfirmed" ? (m.status === "captured" && !S.snap.decisions.meetings[m.id]) : S.f.mstatus === "money" ? isMoney(m) : !["blue","green"].includes(meetingState(m).cls)))
+    && (!q || (m.title + " " + m.source_title + " " + m.id + " " + (m.tags || []).join(" ")).toLowerCase().includes(q)));
   const lim = S.limit.meetings || 40;
-  return `<div class="filters">
-    <select id="fSrc" aria-label="Source">${[["all","All sources"],["readai","Read AI"],["wisprflow","Wispr Flow"]].map(([v,l])=>`<option value="${v}" ${S.f.src===v?"selected":""}>${l}</option>`).join("")}</select>
-    <select id="fMs" aria-label="State">${[["all","Any state"],["unconfirmed","Not confirmed by me"],["problem","Problems only"]].map(([v,l])=>`<option value="${v}" ${S.f.mstatus===v?"selected":""}>${l}</option>`).join("")}</select>
-    <input id="fQ" type="search" placeholder="Search title, meeting ID, tag" value="${esc(S.f.q)}">
+  let html = "", last = null;
+  for(const m of list.slice(0, lim)){
+    const w = when(m.date);
+    if(w !== last){ html += `<div class="group-h"><a>${w}</a></div>`; last = w; }
+    html += meetingRow(m);
+  }
+  const waiting = S.snap.meetings.filter(m => m.status === "captured" && !S.snap.decisions.meetings[m.id] && daysAgo(m.date) <= 7).length;
+  return `<h1 class="lt">Meetings</h1><div class="lt-sub">${S.snap.meetings.length} meetings · ${waiting} this week to confirm</div>
+  <div class="controls">
+    <div class="line"><label class="search">${I.search}<input id="fQ" type="search" placeholder="Search" value="${esc(S.f.q)}" aria-label="Search meetings"></label></div>
+    <div class="line">${seg("src", [["all","All sources"],["readai","Read AI"],["wisprflow","Wispr Flow"]], S.f.src)}
+      ${seg("mstatus", [["all","Any state"],["unconfirmed","To confirm"],["money","Revenue"],["problem","Problems"]], S.f.mstatus)}</div>
   </div>
-  <h2>${list.length} meetings</h2>
-  <div class="list">${list.slice(0,lim).map(meetingRow).join("") || `<div class="empty">No meetings match.</div>`}${list.length>lim?`<button class="more" data-more="meetings">Show 40 more</button>`:""}</div>`;
+  <div class="sec-h" style="margin-top:4px">${list.length} meeting${list.length === 1 ? "" : "s"}</div>
+  <div class="card list">${html || `<div class="empty">No meetings match.</div>`}${list.length > lim ? `<button class="more" type="button" data-more="meetings">Show 40 more</button>` : ""}</div>`;
 }
 
-function gaps(){
-  const failed = S.snap.meetings.filter(m => m.status!=="captured");
-  const noAt = S.snap.meetings.filter(m => m.status==="captured" && !m.airtable);
-  const unowned = S.snap.todos.filter(t => t.status==="open" && !t.owner).length;
-  return {failed, noAt, lint:S.snap.lint, unowned, total: failed.filter(m=>m.status!=="skipped").length + noAt.length + S.snap.lint.length};
+/* one row per note: title from the note name, the date in Apple voice, every failing check in plain words */
+const LINT_WORDS = [[/no action checkboxes/i, "No action checkboxes"], [/airtable-record/i, "Missing Airtable link"], [/frontmatter/i, "Frontmatter incomplete"],
+  [/case-variant|case variant/i, "Name spelled two ways"], [/registry/i, "Not in the registry"]];
+function lintWords(l){ for(const [re, w] of LINT_WORDS){ if(re.test(l.detail || "") || re.test(l.check || "")) return w; } const d = l.detail || l.check || ""; return d.charAt(0).toUpperCase() + d.slice(1); }
+function lintRows(lint){
+  const by = new Map();
+  for(const l of lint){ if(!by.has(l.subject)) by.set(l.subject, []); by.get(l.subject).push(l); }
+  return [...by.entries()].map(([subject, ls]) => {
+    let name = subject.split("/").pop().replace(/\.md$/, "").replace(/^Processed - /, "");
+    let date = "";
+    const dm = / - ([A-Z][a-z]+) (\d{1,2})(?:st|nd|rd|th)?, (\d{4})$/.exec(name);
+    if(dm && MONTHS_L.includes(dm[1])){ name = name.slice(0, dm.index); date = when(`${dm[3]}-${String(MONTHS_L.indexOf(dm[1]) + 1).padStart(2, "0")}-${dm[2].padStart(2, "0")}`); }
+    const checks = [...new Set(ls.map(lintWords))].map(esc).join(" · ");
+    return `<a class="row link" href="${obsidian(subject)}"><span class="hide"></span><div class="main"><div class="t">${esc(name)}</div><div class="s">${date ? `<span>${date}</span>` : ""}<span>${checks}</span></div></div><div class="trail"><span class="pill amber">${ls.length === 1 ? "1 check failing" : ls.length + " checks failing"}</span>${I.chev}</div></a>`;
+  }).join("");
 }
 function viewGaps(){
   const g = gaps();
-  const byStatus = s => g.failed.filter(m => m.status===s);
-  const sec = (title, sub, rows, empty) => `<h2>${title} <span class="sub">${sub}</span></h2><div class="list">${rows || `<div class="empty">${empty}</div>`}</div>`;
-  return sec("Waiting", "landed or waiting at the source, should clear on a later run", [...byStatus("deferred"), ...byStatus("not_extracted")].map(meetingRow).join(""), "Nothing waiting.")
-    + sec("Captured without an Airtable row", "note exists, Airtable link missing", g.noAt.map(meetingRow).join(""), "Every captured meeting has its Airtable row.")
-    + sec("Notes failing checks", "from the last lint run", g.lint.map(l => `<div class="row"><span class="dot bad"></span><div class="main"><div class="t">${esc(l.subject)}</div><div class="meta"><span>${esc(l.check)}</span><span>${esc(l.detail)}</span></div></div><div class="acts"><a class="act" href="${obsidian(l.subject)}">Open in Obsidian</a></div></div>`).join(""), "All notes pass.")
-    + sec("Not captured", "empty or broken recordings; chase these on the Read AI or Wispr side", byStatus("skipped").map(meetingRow).join(""), "No capture failures.")
-    + `<h2>To-dos with no owner <span class="sub">${g.unowned} open</span></h2><div class="list"><button class="more" data-go="todos" data-owner="unowned">Review them in To-dos</button></div>`;
+  const byStatus = s => g.failed.filter(m => m.status === s);
+  const sec = (title, sub, rows, empty) => `<div class="sec-h">${title}<span class="sub">${sub}</span></div><div class="card list">${rows || `<div class="empty">${empty}</div>`}</div>`;
+  return `<h1 class="lt">Gaps</h1><div class="lt-sub">${g.total ? `${g.total} to chase` : "Nothing to chase"}</div>`
+    + sec("Waiting", "still being processed at the source",[...byStatus("deferred"), ...byStatus("not_extracted")].map(meetingRow).join(""), "Nothing waiting.")
+    + sec("Captured without an Airtable row", "note exists, link missing", g.noAt.map(meetingRow).join(""), "Every captured meeting has its Airtable row.")
+    + sec("Notes failing checks", "opens the note in Obsidian", lintRows(g.lint), "All notes pass.")
+    + sec("Not captured", "empty or broken recordings", byStatus("skipped").map(meetingRow).join(""), "No capture failures.")
+    + sec("To-dos with no owner", `${g.unowned} open`, g.unowned ? `<a class="row link" href="#/todos?owner=unowned&money=0"><span class="hide"></span><div class="main"><div class="t">Review them in To-dos</div></div><div class="trail">${I.chev}</div></a>` : "", "Every open to-do has an owner.");
 }
 
-/* ---------- drawer ---------- */
-async function openMeeting(id){
-  const m = meetingById(id); if(!m) return;
+/* ---------- sheet ---------- */
+function openSheet(id){
+  const m = meetingById(id); if(!m){ $("#sheetHost").innerHTML = ""; return; }
   const st = meetingState(m), conf = S.snap.decisions.meetings[m.id];
-  const link = (href, label) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${label}</a>` : `<span class="off">${label}</span>`;
+  const linkrow = (href, label) => href
+    ? `<a class="row link linkrow" href="${esc(href)}" target="_blank" rel="noopener"><span class="hide"></span><div class="main"><div class="t">${label}</div></div><div class="trail">${I.ext}</div></a>`
+    : `<div class="row linkrow off"><span class="hide"></span><div class="main"><div class="t">${label}</div><div class="s"><span>Not available for this meeting</span></div></div></div>`;
+  const kv = (k, v, cls="") => `<div class="row"><span class="hide"></span><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`;
   const todos = m.todo_ids.map(i => S.idx.todos[i]).filter(Boolean);
-  $("#drawerHost").innerHTML = `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-label="${esc(m.title)}">
-    <div class="hd"><div style="flex:1;min-width:0"><h3>${esc(m.title)}</h3><div class="meta"><span class="pill ${st.cls}">${st.label}</span><span>${fmtDate(m.date)}${m.start?" · "+esc(m.start):""}</span></div></div>
-      <button class="btn" data-close aria-label="Close">Close</button></div>
-    <div class="bd">
-      ${m.status==="captured" ? `<div class="sec"><h4>Did this meeting happen?</h4><div class="acts" style="justify-content:flex-start">
-        <button class="act ${conf?.confirmed==="happened"?"on":""}" data-mconf="${conf?.confirmed==="happened"?"clear":"happened"}" data-id="${esc(m.id)}">Yes, it happened</button>
-        <button class="act ${conf?.confirmed==="did_not_happen"?"on":""}" data-mconf="${conf?.confirmed==="did_not_happen"?"clear":"did_not_happen"}" data-id="${esc(m.id)}">No</button></div></div>` : `<div class="err">${esc(m.reason)}</div>`}
-      <div class="sec"><h4>Links</h4><div class="links">
-        ${link(m.report_url, "Read AI report")}${m.source==="wisprflow"?link(m.wispr_url, "Wispr notes"):""}
-        ${link(m.airtable_url, "Airtable row")}${link(obsidian(m.note_file), "Note in Obsidian")}${link(obsidian(m.raw_file), "Raw in Obsidian")}</div></div>
-      <dl class="kv">
-        <dt>Meeting ID</dt><dd class="id">${esc(m.id)}</dd>
-        ${m.source_title && m.source_title!==m.title?`<dt>Original title</dt><dd>${esc(m.source_title)}</dd>`:""}
-        <dt>Source</dt><dd>${m.source==="wisprflow"?"Wispr Flow":"Read AI"}${m.platform?" · "+esc(m.platform):""}</dd>
-        ${m.airtable?`<dt>Airtable</dt><dd class="id">${esc(m.airtable)}</dd>`:""}
-        ${m.participants.length?`<dt>Participants</dt><dd>${m.participants.map(esc).join("<br>")}</dd>`:""}
-      </dl>
-      ${m.context?`<div class="sec"><h4>Context</h4><div>${esc(m.context)}</div></div>`:""}
-      ${m.takeaway.length?`<div class="sec"><h4>Takeaway</h4><ul>${m.takeaway.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
-      ${todos.length?`<div class="sec"><h4>To-dos from this meeting</h4><div class="list">${todos.map(t=>todoRow(t,{noMeeting:true})).join("")}</div></div>`:""}
-      <div class="sec"><h4>Read here</h4><div class="acts" style="justify-content:flex-start">
-        ${m.note_file?`<button class="act" data-load="${esc(m.note_file)}">Show note</button>`:""}
-        ${m.raw_file?`<button class="act" data-load="${esc(m.raw_file)}">Show raw transcript</button>`:""}</div>
-        <div id="noteBox" style="margin-top:8px"></div></div>
+  const mo = S.snap.decisions.money[m.id]?.verdict;
+  $("#sheetHost").innerHTML = `<a class="scrim" href="#/${S.tab === "focus" ? "" : S.tab}" aria-label="Close"></a>
+  <aside class="sheet" role="dialog" aria-label="${esc(m.title)}">
+    <div class="top"><h2>${esc(m.title)}</h2><a class="done" href="#/${S.tab === "focus" ? "" : S.tab}">Done</a></div>
+    <div class="sub"><span class="pill ${st.cls}">${st.label}</span><span>${whenAt(m.date, m.start)}</span>${moneyPill(m)}</div>
+    <div class="body">
+      ${m.status === "captured" ? `<div><h3>Did this meeting happen?</h3><div class="card"><div class="bd" style="padding-top:12px">${seg("mconf", [["happened","Yes, it happened"],["did_not_happen","No"]], conf?.confirmed || "")}</div></div></div>`
+        : `<div class="err">${esc(m.reason)}</div>`}
+      <div><h3>Revenue</h3><div class="card list">
+        <div class="row"><span class="hide"></span><div class="main"><div class="t">${isMoney(m) ? "Tagged #revenue" : "Not tagged as revenue"}</div>
+          <div class="s"><span>${m.money_todos ? `${m.money_todos} of ${todos.length} to-dos about money` : ""}${m.money_todos && m.money_reasons?.length ? " · " : ""}${m.money_reasons?.length ? "Signals: " + esc(m.money_reasons.join(", ")) : (!m.money_todos ? "No money signal in the note" : "")}</span></div></div>
+          <div class="trail">${moneyAction(m)}</div></div>
+      </div></div>
+      <div><h3>Open</h3><div class="card list">
+        ${linkrow(m.report_url, "Read AI report")}${m.source === "wisprflow" ? linkrow(m.wispr_url, "Wispr Flow notes") : ""}
+        ${linkrow(m.airtable_url, "Airtable row")}${linkrow(obsidian(m.note_file), "Note in Obsidian")}${linkrow(obsidian(m.raw_file), "Raw transcript in Obsidian")}
+      </div></div>
+      <div><h3>Details</h3><div class="card list kv">
+        ${m.participants.length ? kv("Participants", m.participants.map(esc).join("<br>")) : ""}
+        ${kv("Source", (m.source === "wisprflow" ? "Wispr Flow" : "Read AI") + (m.platform ? " · " + esc(m.platform) : ""))}
+        ${m.source_title && m.source_title !== m.title ? kv("Original title", esc(m.source_title)) : ""}
+        ${m.airtable ? kv("Airtable", esc(m.airtable), "id") : ""}
+        ${kv("Meeting ID", esc(m.id), "id")}
+      </div></div>
+      ${m.context ? `<div><h3>Context</h3><div class="card"><div class="note">${esc(m.context)}</div></div></div>` : ""}
+      ${m.takeaway.length ? `<div><h3>Takeaway</h3><div class="card"><ul class="tk">${m.takeaway.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div></div>` : ""}
+      ${todos.length ? `<div><h3>To-dos from this meeting</h3><div class="card list">${todos.map(t => todoRow(t, {noMeeting:true})).join("")}</div></div>` : ""}
+      ${m.note_file || m.raw_file ? `<div><h3>Read here</h3><div class="card list">
+        ${m.note_file ? `<button class="row link" type="button" data-load="${esc(m.note_file)}"><span class="hide"></span><div class="main"><div class="t">Show the note</div></div><div class="trail">${I.chev}</div></button>` : ""}
+        ${m.raw_file ? `<button class="row link" type="button" data-load="${esc(m.raw_file)}"><span class="hide"></span><div class="main"><div class="t">Show the raw transcript</div></div><div class="trail">${I.chev}</div></button>` : ""}
+      </div><div id="noteBox" style="margin-top:10px"></div></div>` : ""}
     </div></aside>`;
 }
-function closeDrawer(){ $("#drawerHost").innerHTML = ""; }
 
 /* ---------- events ---------- */
 document.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-tab],[data-go],[data-more],[data-todo],[data-meeting],[data-close],[data-mconf],[data-load]");
+  const el = ev.target.closest("[data-todo],[data-money],[data-money-filter],[data-more],[data-load],[data-open-row],[data-seg] button,[data-v]");
   if(!el) return;
-  if(el.matches("a[data-meeting],a[data-close]")) ev.preventDefault();
-  if(el.dataset.tab){ S.tab = el.dataset.tab; return render(); }
-  if(el.dataset.go){ S.tab = el.dataset.go; if(el.dataset.owner){ S.f.owner = el.dataset.owner; S.f.status = "open"; } closeDrawer(); return render(); }
-  if(el.dataset.more){ S.limit[el.dataset.more] = (S.limit[el.dataset.more] || ({focus:12,todos:25,meetings:40})[el.dataset.more]) * 2; return render(); }
-  if(el.dataset.close !== undefined){ S.currentMeeting = null; return closeDrawer(); }
+  if(el.dataset.openRow){ const row = el.closest(".row"); const was = row.classList.contains("open"); document.querySelectorAll(".row.open").forEach(r => r.classList.remove("open")); if(!was) row.classList.add("open"); return; }
+  if(el.dataset.moneyFilter !== undefined){ ev.preventDefault(); return go("todos", {money:1, owner:S.f.owner}); }  // keeps your owner filter
+  if(el.dataset.more){ S.limit[el.dataset.more] = (S.limit[el.dataset.more] || ({todos:20, meetings:40})[el.dataset.more]) * 2; return render(); }
   if(el.dataset.todo){
     try{ const r = await api("/api/decision", {kind:"todo", id:el.dataset.todo, action:el.dataset.action}); S.snap.decisions = r.decisions; }
     catch(e){ return toast("Could not save: " + e.message); }
-    const drawerOpen = !!$("#drawerHost .drawer");
-    render(); if(drawerOpen && S.currentMeeting) openMeeting(S.currentMeeting);
-    return toast({done:"Marked done. Apply to close it in the vault.", snooze:"Snoozed for 7 days", not_mine:"Marked not mine", keep:"Keeping it open", clear:"Cleared"}[el.dataset.action]);
+    S.recent.add(el.dataset.todo);
+    render();
+    return toast({done:"Done. Apply to close it in the vault.", snooze:"Snoozed for 7 days", not_mine:"Marked not mine", keep:"Keeping it open", clear:"Cleared"}[el.dataset.action]);
   }
-  if(el.dataset.mconf){
-    try{ const r = await api("/api/decision", {kind:"meeting", id:el.dataset.id, action:el.dataset.mconf}); S.snap.decisions = r.decisions; }
+  if(el.dataset.money){
+    try{ const r = await api("/api/decision", {kind:"money", id:el.dataset.money, action:el.dataset.verdict}); S.snap.decisions = r.decisions; }
     catch(e){ return toast("Could not save: " + e.message); }
-    render(); openMeeting(el.dataset.id); return;
+    render(); return toast({yes:"Tagged #revenue", no:"Removed the #revenue tag", clear:"Back to the automatic tag"}[el.dataset.verdict]);
   }
   if(el.dataset.load){
-    const box = $("#noteBox"); box.innerHTML = `<div class="meta">Loading…</div>`;
+    const box = $("#noteBox"); box.innerHTML = `<div class="empty">Loading…</div>`;
     try{ const r = await api("/api/note?file=" + encodeURIComponent(el.dataset.load)); box.innerHTML = `<pre class="note">${esc(r.text)}</pre>`; }
     catch(e){ box.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
     return;
   }
-  if(el.dataset.meeting){ S.currentMeeting = el.dataset.meeting; return openMeeting(el.dataset.meeting); }
+  const segEl = el.closest("[data-seg]");
+  if(segEl && el.dataset.v !== undefined){
+    const k = segEl.dataset.seg, v = el.dataset.v;
+    if(k === "mconf"){
+      const cur = S.snap.decisions.meetings[S.sheet]?.confirmed;
+      try{ const r = await api("/api/decision", {kind:"meeting", id:S.sheet, action: cur === v ? "clear" : v}); S.snap.decisions = r.decisions; }
+      catch(e){ return toast("Could not save: " + e.message); }
+      render(); return toast(cur === v ? "Cleared" : v === "happened" ? "Saved: it happened" : "Saved: it did not happen");
+    }
+    S.f[k] = v; S.limit = {}; S.recent.clear(); return render();
+  }
 });
-document.addEventListener("keydown", e => { if(e.key === "Escape") closeDrawer(); });
-document.addEventListener("change", e => {
-  const map = {fOwner:"owner", fStatus:"status", fSrc:"src", fMs:"mstatus"};
-  if(map[e.target.id]){ S.f[map[e.target.id]] = e.target.value; S.limit = {}; render(); }
+document.addEventListener("click", ev => {
+  const b = ev.target.closest("#fMoney"); if(!b) return;
+  S.f.money = !S.f.money; S.limit = {}; render();
 });
-let qT; document.addEventListener("input", e => { if(e.target.id === "fQ"){ clearTimeout(qT); qT = setTimeout(() => { S.f.q = e.target.value; render(); const i = $("#fQ"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 200); } });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && S.sheet) location.hash = "#/" + (S.tab === "focus" ? "" : S.tab); });
+let qT; document.addEventListener("input", e => { if(e.target.id === "fQ"){ clearTimeout(qT); qT = setTimeout(() => { S.f.q = e.target.value; S.limit = {}; render(); const i = $("#fQ"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 180); } });
 $("#refresh").onclick = () => load(true);
 $("#apply").onclick = async () => {
   const b = $("#apply"); b.disabled = true; b.textContent = "Applying…";
@@ -369,15 +655,23 @@ $("#apply").onclick = async () => {
   catch(e){ toast("Apply failed: " + e.message); }
   load(true);
 };
+(function theme(){
+  const b = $("#theme");
+  const isLight = () => { const t = document.documentElement.getAttribute("data-theme"); return t === "light" || (t !== "dark" && matchMedia("(prefers-color-scheme: light)").matches); };
+  const label = () => { b.textContent = isLight() ? "Dark" : "Light"; };
+  b.onclick = () => { const next = isLight() ? "dark" : "light"; document.documentElement.setAttribute("data-theme", next); try{ localStorage.setItem("t360-theme", next); }catch(e){} label(); };
+  label();
+})();
+window.addEventListener("hashchange", route);
 
 async function load(force){
   try{
     S.snap = await api("/api/snapshot" + (force ? "?refresh=1" : ""));
-    S.idx = {todos:Object.fromEntries(S.snap.todos.map(t=>[t.id,t])), meetings:Object.fromEntries(S.snap.meetings.map(m=>[m.id,m]))};
-    render();
+    S.idx = {todos:Object.fromEntries(S.snap.todos.map(t => [t.id, t])), meetings:Object.fromEntries(S.snap.meetings.map(m => [m.id, m]))};
+    route();
   }catch(e){ $("#main").innerHTML = `<div class="err">Could not read the vault: ${esc(e.message)}</div>`; }
 }
-try{ S.tab = localStorage.getItem("t360.tab") || "focus"; Object.assign(S.f, JSON.parse(localStorage.getItem("t360.f") || "{}")); }catch(e){}
+try{ Object.assign(S.f, JSON.parse(localStorage.getItem("t360.f") || "{}")); }catch(e){}
 load(false);
 </script>
 </body>

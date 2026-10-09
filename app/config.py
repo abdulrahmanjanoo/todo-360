@@ -4,7 +4,7 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-DATA = os.path.join(ROOT, "_data")
+DATA = os.environ.get("TODO360_DATA") or os.path.join(ROOT, "_data")  # tests point this at a temp folder
 DEFAULT_VAULT = os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs/Obsidian Notes")
 
 

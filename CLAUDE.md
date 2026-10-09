@@ -9,7 +9,12 @@ to-do and meeting the daily Read AI / Wispr Flow run produced, lets Abdul decide
 ## Run
 - `python3 app/server.py` opens http://127.0.0.1:8360 (or double-click `Open To-Do 360.command`).
 - Vault path: `config.json` → `vault` (default: iCloud `Obsidian Notes`), or env `TODO360_VAULT`.
-- Tests: `python3 -m unittest discover -s tests` (must stay green; add a test for new behaviour).
+- Gate: `qa/run.sh` = Python unit tests (`python3 -m unittest discover -s tests`) + Playwright browser specs
+  (`qa/app.spec.js`, system Chrome, against `qa/fake_server.py` on a throwaway vault). Must stay green before
+  every commit; add a unit test for new data behaviour and a browser spec for new UI behaviour.
+- Design review: `TODO360_URL=http://127.0.0.1:8362 node qa/shots.js <dir>` screenshots every screen (dark,
+  light, phone) for the critic round. Procedure (same as Health 360): builder → screenshots → a Jobs/Ive critic
+  agent with the 15-point checklist + an actor agent playing Abdul → fix → repeat until the critic says ship.
 
 ## Hard rules
 - **Read-only on the vault, except through the engine.** `app/export.py` only reads. The only vault
@@ -26,9 +31,13 @@ to-do and meeting the daily Read AI / Wispr Flow run produced, lets Abdul decide
 
 ## Map
 - `app/export.py`   vault → snapshot (meetings, todos, lint gaps). Parsers for frontmatter, log, ordinals.
-- `app/decisions.py` Abdul's decisions store and the apply-to-vault step.
+- `app/money.py`    the revenue lens: `classify(text, tag)` → `#revenue` (derived, never written to the vault).
+- `app/decisions.py` Abdul's decisions store (todo actions, meeting confirmations, money overrides) and the apply-to-vault step.
 - `app/server.py`   localhost server: `/api/snapshot`, `/api/note`, `/api/decision`, `/api/apply`.
-- `app/static/index.html` the whole UI (tabs Focus · To-dos · Meetings · Gaps, meeting drawer).
+- `app/static/index.html` the whole UI (hash routes `#/` Focus · `#/todos` · `#/meetings` · `#/gaps`, `#/meeting/<id>` sheet).
+  Design system = Apple Health's, token-for-token with Janoo Health 360 (`shared_ui.py` there): iOS system colours,
+  Dynamic Type at Large, inset-grouped cards, one hue per card, Apple date voice (Today / Yesterday / weekday / 6 Oct).
+- `qa/` the gate: `run.sh`, `app.spec.js`, `fake_server.py`, `shots.js`, `playwright.config.js`.
 - Vault side: `.llm-wiki/runbook.md`, `.llm-wiki/engine/wiki.py`, `Wiki/.state/todos.json`.
 
 ## Git practice

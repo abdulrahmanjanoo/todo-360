@@ -16,6 +16,10 @@ import glob
 import json
 import os
 import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import money  # noqa: E402
 
 NOTES = "Read AI Transcribe Notes"
 AIRTABLE_ROW = "https://airtable.com/app1H4gm8lva6gbbA/tbl7vuh1inQ2yGX5O/%s"
@@ -95,6 +99,9 @@ def load_raw(v):
         if not mid:
             continue
         parts = fm.get("participants") or []
+        parts = parts if isinstance(parts, list) else [parts]
+        # "Ben Trafford1" -> "Ben Trafford"; bare e-mail addresses are invitees, not people in the room
+        parts = [re.sub(r"(?<=[A-Za-z])\d+(?=\s*(\(|$))", "", p).strip() for p in parts if p and "@" not in p]
         out[mid] = {
             "raw_file": v.rel(path),
             "raw_title": os.path.basename(path)[:-3],
@@ -106,7 +113,7 @@ def load_raw(v):
             "platform": fm.get("platform") or "",
             "report_url": fm.get("report-url") or "",
             "complete": str(fm.get("complete", "")).lower() == "true",
-            "participants": parts if isinstance(parts, list) else [parts],
+            "participants": parts,
             "words": len(body.split()),
         }
     return out
@@ -121,6 +128,7 @@ def load_processed(v):
         mid = fm.get("meeting-id") or ""
         h1 = re.search(r"^# (.+)$", body, re.M)
         heading = plain(re.sub(r",\s*\[\[[^\]]+\]\]\s*$", "", h1.group(1))) if h1 else os.path.basename(path)[11:-3]
+        heading = re.sub(r"\s*\((Transcript Takeaways|Read AI)\)\s*$", "", heading, flags=re.I)
         takeaway = []
         tm = re.search(r"^## Takeaway\s*\n(.*?)(?=^#|\Z)", body, re.S | re.M)
         if tm:
@@ -261,9 +269,13 @@ def build(vault_root, today=None):
     for t in todos_doc.get("todos", []):
         created = parse_ordinal(t.get("created"))
         closed = t.get("closed_by") or {}
+        text = plain(t.get("text"))
+        verdict = money.classify(text, t.get("tag") or "")
         todos.append({
             "id": t.get("id"),
-            "text": plain(t.get("text")),
+            "text": text,
+            "money": verdict["money"],
+            "money_reasons": verdict["reasons"],
             "owner": short_title(t.get("owner")),
             "owner_title": t.get("owner") or "",
             "tag": t.get("tag") or "",
@@ -285,8 +297,18 @@ def build(vault_root, today=None):
     for t in todos:
         if t["meeting_id"]:
             by_meeting.setdefault(t["meeting_id"], []).append(t["id"])
+    todo_by_id = {t["id"]: t for t in todos}
     for mid, m in meetings.items():
         m["todo_ids"] = by_meeting.get(mid, [])
+        # a meeting carries the revenue tag when its own words say so, or most of its to-dos are about money
+        # (a money word in the title, or two strong signals in the note, or half its to-dos: most meetings mention a price somewhere)
+        title = money.classify(m["title"], "")
+        own = money.classify(" ".join([m["title"], m["context"]] + m["takeaway"]), "")
+        money_todos = [i for i in m["todo_ids"] if i in todo_by_id and todo_by_id[i]["money"]]
+        m["money_todos"] = len(money_todos)
+        m["money"] = title["money"] or (own["money"] and own["score"] > money.MIN_SCORE) or (
+            len(money_todos) >= 2 and len(money_todos) * 2 >= len(m["todo_ids"]))
+        m["money_reasons"] = own["reasons"]
 
     return {
         "generated": dt.datetime.now().isoformat(timespec="seconds"),
