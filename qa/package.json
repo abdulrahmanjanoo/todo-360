@@ -1,0 +1,11 @@
+{
+  "name": "todo360-qa",
+  "private": true,
+  "description": "Browser tests for To-Do 360 (Playwright on the system Chrome, no browser download).",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0"
+  }
+}

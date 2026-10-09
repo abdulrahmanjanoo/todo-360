@@ -5,3 +5,6 @@ _data/*.tmp
 .claude/
 worktrees
 _data/snapshot*.json
+qa/node_modules/
+qa/test-results/
+qa/shots/
