@@ -111,18 +111,28 @@ svg{display:block}
 .row .s a{color:var(--label-2)}
 .row .s a:hover{color:var(--blue)}
 .row .main{min-width:0}
+.row.decided .main{opacity:.55}  /* decided on this screen: stays until the filters change */
 .row .trail{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 .row.link .trail{flex-wrap:nowrap}
 .row.link{cursor:pointer;color:var(--label)}
 .row.link .t{color:var(--label)}
 /* row actions stay quiet until the pointer is on the row; always visible on touch screens */
-@media (hover:hover){.row .trail .act{opacity:0;transition:opacity .15s ease-out}.row:hover .trail .act,.row:focus-within .trail .act,.row .trail .act.on{opacity:1}}
+@media (hover:hover){
+  .row .trail .act{opacity:0;visibility:hidden;transition:opacity .15s ease-out}
+  .row:hover .trail .act,.row:focus-within .trail .act,.row .trail .act.on{opacity:1;visibility:visible}
+  /* hidden actions must not reserve width: they overlay the row's right edge on hover */
+  .list .row:not(.link){position:relative;grid-template-columns:auto 1fr}
+  .list .row:not(.link) .trail{position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:6px 4px 6px 16px;border-radius:999px;background:var(--card);flex-wrap:nowrap}
+  .sheet .row .trail{position:static;transform:none;padding:0}
+  .sheet .row .trail .act{opacity:1;visibility:visible}
+  .sheet .list .row:not(.link){grid-template-columns:auto 1fr auto}
+}
 .row.link:hover{background:color-mix(in srgb,var(--label) 4%,transparent)}
 .row.link:first-child:hover{border-radius:var(--radius) var(--radius) 0 0}
 .row.link:last-child:hover{border-radius:0 0 var(--radius) var(--radius)}
 .row.link:only-child:hover{border-radius:var(--radius)}
 .chev{width:14px;height:14px;color:var(--label-3);flex:none}
-.group-h{padding:18px 16px 6px;font-size:13px;line-height:18px;color:var(--label-2);text-transform:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.group-h{padding:16px 16px 4px;font-size:13px;line-height:18px;color:var(--label-2);text-transform:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .group-h a{font-weight:600;color:var(--label);font-size:15px;line-height:20px;letter-spacing:-.24px}
 .group-h a:hover{color:var(--blue)}
 .group-h + .row::before{display:none}
@@ -200,15 +210,20 @@ ul.tk li{margin:4px 0}
   .appbar{gap:10px;padding:8px 16px}
   .appbar nav{position:fixed;bottom:0;left:0;right:0;z-index:20;margin:0;justify-content:space-around;padding:8px 8px 22px;background:var(--card);border-top:1px solid var(--sep)}
   .appbar nav a{font-size:12px;line-height:16px;padding:4px 10px}
-  .appbar .meta,.appbar #refresh,.appbar #theme{display:none}
+  .appbar .meta,.appbar #refresh,.appbar #theme,.appbar #apply:disabled{display:none}
   .appbar .right{margin-left:auto}
   .page{padding-inline:16px;padding-bottom:110px}
   .sec-h{flex-wrap:wrap}
   .sec-h .sub{width:100%;margin-left:0}
-  .controls .line{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  /* control rows bleed into the gutter and fade at the edge, so the next control is visibly there */
+  .controls .line{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0 16px 2px;margin-inline:-16px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+  .controls .line::after{content:"";flex:none;width:16px}
   .seg{flex:none}
   .list .row{grid-template-columns:auto 1fr}
-  .list .row .trail{grid-column:1/-1;justify-content:flex-start}
+  .list .row:not(.link){position:static;transform:none}
+  .list .row:not(.link) .trail{position:static;transform:none;padding:0;grid-column:1/-1;justify-content:flex-start;background:none}
+  .row .trail .act{opacity:1;visibility:visible;padding:8px 14px}
+  .circ{width:28px;height:28px}
   .list .row.link .trail{grid-column:auto}
   .sheet .body{padding-bottom:110px}
 }
@@ -363,9 +378,11 @@ function verb(t){
 function moneyPill(x, opts={}){
   const o = S.snap.decisions.money[x.id]?.verdict;
   if(o === "no") return `<span class="l3">Not revenue, by you</span>`;
-  if(!isMoney(x) || opts.inMoney) return "";
-  const why = o === "yes" ? "by you" : (x.money_reasons || []).slice(0, 2).join(", ");
-  return `<button class="pill money" type="button" data-money-filter title="Show only revenue to-dos">${I.money}#revenue</button>${why ? `<span class="l3">${esc(why)}</span>` : ""}`;
+  if(!isMoney(x)) return "";
+  const why = o === "yes" ? "tagged by you" : (x.money_reasons || []).slice(0, 2).join(", ");
+  const reason = why ? `<span class="l3">${esc(why)}</span>` : "";
+  if(opts.inMoney) return reason;  // the view already says revenue; keep the why so the tag can be audited
+  return `<button class="pill money" type="button" data-money-filter title="Show only revenue to-dos">${I.money}#revenue</button>${reason}`;
 }
 function todoRow(t, opts={}){
   const d = decisionOf(t), e = effective(t), mt = meetingById(t.meeting_id);
@@ -384,9 +401,9 @@ function todoRow(t, opts={}){
   const moneyAct = open ? moneyAction(t) : "";
   const owner = !t.owner ? "No owner" : t.owner === S.snap.me ? "You" : esc(t.owner);
   const tag = t.tag_short && t.tag_short !== "untagged" ? `<a href="#/todos?q=${encodeURIComponent(t.tag_short)}">${esc(t.tag_short)}</a>` : "";
-  return `<div class="row has-lead" data-id="${esc(t.id)}">${circle}<div class="main">
+  return `<div class="row has-lead ${e !== "open" && S.recent.has(t.id) ? "decided" : ""}" data-id="${esc(t.id)}">${circle}<div class="main">
     <div class="t">${esc(verb(t))}</div>
-    <div class="s">${moneyPill(t, opts)}<span>${owner}</span>${tag}<span>${ageWords(t.age_days)}</span>
+    <div class="s"><span>${owner}</span>${tag}<span>${ageWords(t.age_days)}</span>${moneyPill(t, opts)}
       ${!opts.noMeeting && mt ? `<a href="#/meeting/${encodeURIComponent(mt.id)}">${esc(mt.title)}</a>` : ""}${status}</div>
   </div><div class="trail">${acts}${moneyAct}</div></div>`;
 }
@@ -415,15 +432,18 @@ function viewFocus(){
   const moneyFresh = moneyMine.filter(t => t.age_days <= 7).length;
   const share = open.length ? Math.round(money.length / open.length * 100) : 0;
   const list = (rows, empty) => `<div class="card list">${rows.length ? rows.join("") : `<div class="empty">${empty}</div>`}</div>`;
-  const top = moneyMine.slice().sort((a,b) => (a.age_days ?? 0) - (b.age_days ?? 0)).slice(0, 5);
+  // revenue waiting longest: what is slipping; the new list excludes anything already shown there
+  const top = moneyMine.slice().sort((a,b) => (b.age_days ?? 0) - (a.age_days ?? 0)).slice(0, 5);
+  const freshList = fresh.filter(t => !top.includes(t)).slice(0, 5);
+  const newest = arr => arr.length ? when(arr.slice().sort((a,b) => (a.age_days ?? 1e9) - (b.age_days ?? 1e9))[0].created) : "Today";
   return `<h1 class="lt">Focus</h1><div class="lt-sub">${longToday()}</div>
   <div class="grid">
-    ${metric("c-money", I.money, "Revenue", moneyMine.length, "to-dos on you", `${money.length} across everyone · ${moneyFresh} new this week`, "#/todos?owner=me&money=1")}
-    ${metric("c-you", I.you, "On you", mine.length, "open to-dos", `${open.length} open across everyone`, "#/todos?owner=me&money=0&age=all")}
-    ${metric("c-new", I.spark, "New this week", fresh.length, "on you", fresh.length ? `Newest from ${when(fresh[0].created)}` : "Nothing new this week", "#/todos?owner=me&money=0&age=new")}
-    ${metric("c-old", I.clock, "Older than 30 days", stale.length, "on you", stale.length ? `Oldest is ${ageWords(Math.max(...stale.map(t => t.age_days)))} old` : "Nothing is going stale", "#/todos?owner=me&money=0&age=old")}
+    ${metric("c-money", I.money, "Revenue", moneyMine.length, "to-dos on you", `${money.length} across everyone · ${moneyFresh} new this week`, "#/todos?owner=me&money=1", newest(moneyMine))}
+    ${metric("c-you", I.you, "On you", mine.length, "open to-dos", `${open.length} open across everyone`, "#/todos?owner=me&money=0&age=all", newest(mine))}
+    ${metric("c-new", I.spark, "New this week", fresh.length, "on you", fresh.length ? `Newest from ${when(fresh[0].created)}` : "Nothing new this week", "#/todos?owner=me&money=0&age=new", "7 days")}
+    ${metric("c-old", I.clock, "Older than 30 days", stale.length, "on you", stale.length ? `Oldest is ${ageWords(Math.max(...stale.map(t => t.age_days)))} old` : "Nothing is going stale", "#/todos?owner=me&money=0&age=old", "30 days")}
     ${metric("c-meet", I.cal, "Meetings this week", recent.length, "captured", `${unconfirmed.length} to confirm · ${moneyMeetings.length} about revenue`, "#/meetings?mstatus=unconfirmed", "7 days")}
-    ${metric("c-gap", I.warn, "Capture gaps", g.total, g.total === 1 ? "gap" : "gaps", g.total ? `${g.noAt.length} without Airtable · ${g.lint.length} failing checks` : "Every meeting landed cleanly", "#/gaps")}
+    ${metric("c-gap", I.warn, "Capture gaps", g.total, g.total === 1 ? "gap" : "gaps", g.total ? `${g.noAt.length} without Airtable · ${g.lint.length} failing checks` : "Every meeting landed cleanly", "#/gaps", g.failed.length ? when(g.failed[0].date) : "Today")}
   </div>
   <div class="sec-h">Highlights</div>
   <div class="grid">
@@ -434,10 +454,10 @@ function viewFocus(){
       <div class="bd"><div class="hl">${recent.length ? `<b>${recent.length}</b> meetings captured this week, <b>${moneyMeetings.length}</b> of them about revenue.` : "No meetings captured in the last 7 days."}</div>
       <div class="hl"><div class="fact">${unconfirmed.length ? `${unconfirmed.length} still waiting for you to confirm they happened` : "All confirmed"}</div></div></div></a>
   </div>
-  <div class="sec-h">Revenue on you <a class="sub" href="#/todos?owner=me&money=1">Newest first · See all ${moneyMine.length}</a></div>
+  <div class="sec-h">Revenue waiting longest <a class="sub" href="#/todos?owner=me&money=1">See all ${moneyMine.length}</a></div>
   ${list(top.map(t => todoRow(t, {inMoney:true})), "No open revenue to-dos on you.")}
   <div class="sec-h">New on you <a class="sub" href="#/todos?owner=me&money=0&age=new">See all ${fresh.length}</a></div>
-  ${list(fresh.slice(0, 5).map(t => todoRow(t)), "Nothing new on you this week.")}
+  ${list(freshList.map(t => todoRow(t)), "Nothing new on you this week.")}
   <div class="sec-h">Meetings this week <a class="sub" href="#/meetings">See all ${recent.length}</a></div>
   ${list(recent.slice(0, 5).map(meetingRow), "No meetings in the last 7 days.")}`;
 }
@@ -508,14 +528,20 @@ function viewMeetings(){
   <div class="card list">${html || `<div class="empty">No meetings match.</div>`}${list.length > lim ? `<button class="more" type="button" data-more="meetings">Show 40 more</button>` : ""}</div>`;
 }
 
-/* one row per note: title from the note name, every failing check on the subline */
+/* one row per note: title from the note name, the date in Apple voice, every failing check in plain words */
+const LINT_WORDS = [[/no action checkboxes/i, "No action checkboxes"], [/airtable-record/i, "Missing Airtable link"], [/frontmatter/i, "Frontmatter incomplete"],
+  [/case-variant|case variant/i, "Name spelled two ways"], [/registry/i, "Not in the registry"]];
+function lintWords(l){ for(const [re, w] of LINT_WORDS){ if(re.test(l.detail || "") || re.test(l.check || "")) return w; } const d = l.detail || l.check || ""; return d.charAt(0).toUpperCase() + d.slice(1); }
 function lintRows(lint){
   const by = new Map();
   for(const l of lint){ if(!by.has(l.subject)) by.set(l.subject, []); by.get(l.subject).push(l); }
   return [...by.entries()].map(([subject, ls]) => {
-    const name = subject.split("/").pop().replace(/\.md$/, "").replace(/^Processed - /, "");
-    const checks = ls.map(l => `${esc(l.check)}: ${esc(l.detail)}`).join(" · ");
-    return `<a class="row link" href="${obsidian(subject)}"><span class="hide"></span><div class="main"><div class="t">${esc(name)}</div><div class="s"><span>${checks}</span></div></div><div class="trail"><span class="pill amber">${ls.length === 1 ? "1 check failing" : ls.length + " checks failing"}</span>${I.chev}</div></a>`;
+    let name = subject.split("/").pop().replace(/\.md$/, "").replace(/^Processed - /, "");
+    let date = "";
+    const dm = / - ([A-Z][a-z]+) (\d{1,2})(?:st|nd|rd|th)?, (\d{4})$/.exec(name);
+    if(dm && MONTHS_L.includes(dm[1])){ name = name.slice(0, dm.index); date = when(`${dm[3]}-${String(MONTHS_L.indexOf(dm[1]) + 1).padStart(2, "0")}-${dm[2].padStart(2, "0")}`); }
+    const checks = [...new Set(ls.map(lintWords))].map(esc).join(" · ");
+    return `<a class="row link" href="${obsidian(subject)}"><span class="hide"></span><div class="main"><div class="t">${esc(name)}</div><div class="s">${date ? `<span>${date}</span>` : ""}<span>${checks}</span></div></div><div class="trail"><span class="pill amber">${ls.length === 1 ? "1 check failing" : ls.length + " checks failing"}</span>${I.chev}</div></a>`;
   }).join("");
 }
 function viewGaps(){
@@ -525,7 +551,7 @@ function viewGaps(){
   return `<h1 class="lt">Gaps</h1><div class="lt-sub">${g.total ? `${g.total} to chase` : "Nothing to chase"}</div>`
     + sec("Waiting", "should clear on a later run", [...byStatus("deferred"), ...byStatus("not_extracted")].map(meetingRow).join(""), "Nothing waiting.")
     + sec("Captured without an Airtable row", "note exists, link missing", g.noAt.map(meetingRow).join(""), "Every captured meeting has its Airtable row.")
-    + sec("Notes failing checks", "last lint run, opens the note in Obsidian", lintRows(g.lint), "All notes pass.")
+    + sec("Notes failing checks", "opens the note in Obsidian", lintRows(g.lint), "All notes pass.")
     + sec("Not captured", "empty or broken recordings", byStatus("skipped").map(meetingRow).join(""), "No capture failures.")
     + sec("To-dos with no owner", `${g.unowned} open`, g.unowned ? `<a class="row link" href="#/todos?owner=unowned&money=0"><span class="hide"></span><div class="main"><div class="t">Review them in To-dos</div></div><div class="trail">${I.chev}</div></a>` : "", "Every open to-do has an owner.");
 }

@@ -101,7 +101,7 @@ def load_raw(v):
         parts = fm.get("participants") or []
         parts = parts if isinstance(parts, list) else [parts]
         # "Ben Trafford1" -> "Ben Trafford"; bare e-mail addresses are invitees, not people in the room
-        parts = [re.sub(r"\d+$", "", p).strip() for p in parts if p and "@" not in p]
+        parts = [re.sub(r"(?<=[A-Za-z])\d+(?=\s*(\(|$))", "", p).strip() for p in parts if p and "@" not in p]
         out[mid] = {
             "raw_file": v.rel(path),
             "raw_title": os.path.basename(path)[:-3],
@@ -306,7 +306,7 @@ def build(vault_root, today=None):
         own = money.classify(" ".join([m["title"], m["context"]] + m["takeaway"]), "")
         money_todos = [i for i in m["todo_ids"] if i in todo_by_id and todo_by_id[i]["money"]]
         m["money_todos"] = len(money_todos)
-        m["money"] = title["money"] or own["score"] >= 2 * money.MIN_SCORE or (
+        m["money"] = title["money"] or (own["money"] and own["score"] > money.MIN_SCORE) or (
             len(money_todos) >= 2 and len(money_todos) * 2 >= len(m["todo_ids"]))
         m["money_reasons"] = own["reasons"]
 

@@ -37,7 +37,9 @@ test('To-dos: Money filter keeps only revenue to-dos and the tag explains itself
   const rows = page.locator('.list .row[data-id]');
   await expect(rows).toHaveCount(2);
   await expect(rows.locator('.pill.money')).toHaveCount(0); // the filter already says it; no pill repeated per row
-  await expect(rows.locator('button.act.money')).toHaveText(['Not revenue', 'Not revenue']);
+  await expect(page.locator('.row[data-id="T-0101"] .s')).toContainText('proposal, price'); // but the why stays, for auditing
+  await rows.first().hover();
+  await expect(rows.first().locator('button.act.money')).toHaveText('Not revenue');
   // the Focus card deep link lands on the same filter
   await page.goto('/#/todos?owner=me&money=1');
   await expect(page.locator('#fMoney')).toHaveAttribute('aria-pressed', 'true');
@@ -47,12 +49,25 @@ test('To-dos: Money override is saved and survives a reload', async ({ page }) =
   await page.goto('/#/todos?owner=me&money=0');
   const plain = page.locator('.row[data-id="T-0102"]');
   await expect(plain.locator('.pill.money')).toHaveCount(0);
+  await plain.hover(); // actions appear on hover on a desktop
+  await expect(plain.locator('button.act.money')).toHaveText('Revenue');
   await plain.locator('button.act.money').click();
   await expect(plain.locator('.pill.money')).toHaveCount(1);
+  await expect(plain.locator('.s')).toContainText('tagged by you');
   await page.reload();
   await expect(page.locator('.row[data-id="T-0102"] .pill.money')).toHaveCount(1);
+  await page.locator('.row[data-id="T-0102"]').hover();
+  await expect(page.locator('.row[data-id="T-0102"] button.act.money')).toHaveText('Reset to automatic');
   await page.locator('.row[data-id="T-0102"] button.act.money').click(); // back to automatic
   await expect(page.locator('.row[data-id="T-0102"] .pill.money')).toHaveCount(0);
+  // overriding a tagged one to "no" leaves a note on the row
+  const tagged = page.locator('.row[data-id="T-0101"]');
+  await tagged.hover();
+  await tagged.locator('button.act.money').click();
+  await expect(tagged.locator('.s')).toContainText('Not revenue, by you');
+  await tagged.hover();
+  await tagged.locator('button.act.money').click();
+  await expect(tagged.locator('.pill.money')).toHaveCount(1);
 });
 
 test('To-dos: the circle marks done, one status pill, Apply counts it', async ({ page }) => {

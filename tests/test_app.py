@@ -216,6 +216,15 @@ class DecisionsTest(Base):
 
 
 class ServerTest(Base):
+    def test_participants_cleaned(self):
+        import export
+        raw = os.path.join(self.vault, "Read AI Transcribe Notes", "Raw", "Raw - Pansoft - October 8th, 2026.md")
+        text = open(raw).read().replace('  - "Rehan Surya (attended)"', '  - "Rehan Surya (attended)"\n  - "Ben Trafford1 (attended)"\n  - "someone@pansoft.com"')
+        open(raw, "w").write(text)
+        s = export.build(self.vault, today=dt.date(2026, 10, 9))
+        m = {m["id"]: m for m in s["meetings"]}["01M4DTSVYXQQM0DXNVJ2QH3EXT"]
+        self.assertEqual(m["participants"], ["Rehan Surya (attended)", "Ben Trafford (attended)"])
+
     def test_safe_note(self):
         import server
         self.assertIsNotNone(server.safe_note("Read AI Transcribe Notes/Raw/Raw - Pansoft - October 8th, 2026.md"))
