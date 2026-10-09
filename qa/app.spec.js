@@ -3,6 +3,9 @@
 // one status pill per row, every number on Focus is a link, the Money filter really filters.
 const { test, expect } = require('@playwright/test');
 
+// a row's actions live under its "···" chip (visible on hover with a pointer, always on touch)
+const openRow = async row => { await row.hover(); await row.locator('.more-btn').click(); };
+
 test.beforeEach(async ({ page, request }) => {
   await page.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
   // every spec starts from a clean decisions store
@@ -38,7 +41,7 @@ test('To-dos: Money filter keeps only revenue to-dos and the tag explains itself
   await expect(rows).toHaveCount(2);
   await expect(rows.locator('.pill.money')).toHaveCount(0); // the filter already says it; no pill repeated per row
   await expect(page.locator('.row[data-id="T-0101"] .s')).toContainText('proposal, price'); // but the why stays, for auditing
-  await rows.first().hover();
+  await openRow(rows.first());
   await expect(rows.first().locator('button.act.money')).toHaveText('Remove tag');
   // the Focus card deep link lands on the same filter
   await page.goto('/#/todos?owner=me&money=1');
@@ -49,23 +52,24 @@ test('To-dos: Money override is saved and survives a reload', async ({ page }) =
   await page.goto('/#/todos?owner=me&money=0');
   const plain = page.locator('.row[data-id="T-0102"]');
   await expect(plain.locator('.pill.money')).toHaveCount(0);
-  await plain.hover(); // actions appear on hover on a desktop
+  await expect(plain.locator('.trail')).toBeHidden(); // actions stay out of the way until asked for
+  await openRow(plain);
   await expect(plain.locator('button.act.money')).toHaveText('Tag as revenue');
   await plain.locator('button.act.money').click();
   await expect(plain.locator('.pill.money')).toHaveCount(1);
   await expect(plain.locator('.s')).toContainText('tagged by you');
   await page.reload();
   await expect(page.locator('.row[data-id="T-0102"] .pill.money')).toHaveCount(1);
-  await page.locator('.row[data-id="T-0102"]').hover();
+  await openRow(page.locator('.row[data-id="T-0102"]'));
   await expect(page.locator('.row[data-id="T-0102"] button.act.money')).toHaveText('Use automatic');
   await page.locator('.row[data-id="T-0102"] button.act.money').click(); // back to automatic
   await expect(page.locator('.row[data-id="T-0102"] .pill.money')).toHaveCount(0);
   // overriding a tagged one to "no" leaves a note on the row
   const tagged = page.locator('.row[data-id="T-0101"]');
-  await tagged.hover();
+  await openRow(tagged);
   await tagged.locator('button.act.money').click();
   await expect(tagged.locator('.s')).toContainText('Not revenue, by you');
-  await tagged.hover();
+  await openRow(tagged);
   await tagged.locator('button.act.money').click();
   await expect(tagged.locator('.pill.money')).toHaveCount(1);
 });
@@ -99,6 +103,8 @@ test('Meetings: rows open the sheet, links that are missing are disabled, Escape
   await expect(sheet.locator('.linkrow.off')).toHaveCount(0); // captured meeting: all its links exist
   await expect(sheet.locator('.sub .pill.money')).toHaveCount(1); // 3 of its 6 to-dos are about money
   await expect(sheet).toContainText('3 of 6 to-dos about money');
+  await expect(sheet.locator('button.act.money').first()).toBeVisible(); // the sheet's override is always visible, no chip
+  await expect(sheet.locator('.more-btn:visible')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.locator('.sheet')).toHaveCount(0);
   await expect(page).toHaveURL(/#\/meetings$/);
