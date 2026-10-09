@@ -174,9 +174,14 @@ test('Light mode: controls sit on a visible fill, never on the page colour', asy
   await ctx.close();
 });
 
-test('Phone: rows keep their separators, actions open from one chip per row', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test('Phone: rows keep their separators, actions open from one chip per row', async ({ browser }) => {
+  // a real phone: touch, no hover, so the chip must be visible without a pointer
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
   await page.goto('/#/todos?owner=me&money=0&age=all');
+  expect(await page.evaluate(() => matchMedia('(hover:none)').matches)).toBe(true);
+  await expect(page.locator('.list .row[data-id] .more-btn').first()).toBeVisible();
+  expect(await page.locator('.list .row[data-id] .more-btn').first().evaluate(b => getComputedStyle(b).opacity)).toBe('1');
   const rows = page.locator('.list .row[data-id]');
   await expect(rows).toHaveCount(4);
   // the separator is drawn by ::before relative to the row: its top must sit at the row's top
@@ -184,9 +189,13 @@ test('Phone: rows keep their separators, actions open from one chip per row', as
   expect(sep.pos).toBe('relative');
   expect(sep.h).toBe('1px');
   await expect(rows.first().locator('.trail')).toBeHidden();
-  await rows.first().locator('.more-btn').click();
+  await rows.first().locator('.more-btn').tap();
   await expect(rows.first().locator('.trail')).toBeVisible();
   await expect(rows.first().locator('.trail .act')).toHaveCount(4);
+  // the opened strip aligns with the title column, not under the circle
+  const [trailX, titleX] = await rows.first().evaluate(r => [r.querySelector('.trail').getBoundingClientRect().left, r.querySelector('.t').getBoundingClientRect().left]);
+  expect(Math.abs(trailX - titleX)).toBeLessThan(2);
+  await ctx.close();
 });
 
 test('Layout: nothing overflows horizontally at phone width', async ({ page }) => {

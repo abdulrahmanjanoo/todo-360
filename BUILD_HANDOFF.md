@@ -40,7 +40,7 @@ about 1 in 4 older than 30 days). He wants one place to see what was captured, w
   done; a row you just decided stays visible until you change filters. Row actions appear on hover (always on
   touch). Owner shows as "You", the "Name to …" prefix is trimmed in display, `untagged` and "(Transcript
   Takeaways)" are hidden. Sheet for a meeting: confirm, revenue, links (missing ones disabled), details, to-dos, note.
-- **Gate**: `qa/run.sh` (16 unit tests + 12 Playwright specs). Critic/actor rounds recorded below.
+- **Gate**: `qa/run.sh` (15 unit tests + 13 Playwright specs). Critic/actor rounds recorded below.
 
 ### Review rounds (9 Oct 2026, builder → shots → Jobs/Ive critic + actor playing Abdul → fix)
 - **Critic round 1**, "not yet, one short round away", 12 defects: light-mode controls invisible (`--fill` equalled the
@@ -62,7 +62,23 @@ about 1 in 4 older than 30 days). He wants one place to see what was captured, w
 - **Actor round 2**: "tagging believable, nine of nine; I would use this tomorrow morning on the laptop; on the phone
   once the targets and controls are fixed" (both then applied). Still asks for: snooze choices, revenue grouped by
   account with rupee value, a stale view.
-- **Critic round 3**: see the line below this list once recorded.
+- **Critic round 3**, "not yet", 7: phone separators lost to a `position:static` override, four chips per phone row
+  again, hover overlay covering long titles, reason word floating unanchored in Money views, noun labels on the tag
+  actions, vault clock on the Revenue highlight, "should clear on a later run". All applied (one "···" chip per row,
+  glyph before the reason, "Tag as revenue / Remove tag / Use automatic").
+- **Critic round 4**, "not yet", 4: sheet override hidden by a higher-specificity trail rule, desktop hover reflowing
+  long rows, chip and trail unstyled on wide touch screens (iPad), chip and circle under 44pt. All applied as **one
+  rule set keyed on input, not width**: every non-link row = title + subline + a 44pt "···" chip at the right (visible
+  on hover with a pointer, always on touch); the actions open under the row on tap; the sheet's rows keep their
+  control visible; the circle gets a 44pt hit area.
+- **Critic round 5: VERDICT ship.** "This is the Apple Health of to-dos: the Summary reads like Health's, the lists read
+  like Reminders, the money story is told once per screen and never shouts." Two non-blocking notes, both applied:
+  phone spec and captures run with touch emulation (`hasTouch`, `isMobile`) so the chip is really exercised; the
+  opened action strip aligns with the title column (`grid-column:2/-1`).
+- **Lessons for next time** (same as Health 360's): the capture is the truth, not the CSS (two regressions were only
+  visible in a screenshot); a desktop browser at phone width is not a phone (`hover:hover` stays true without touch
+  emulation); hiding with `opacity:0` still reserves layout; specificity of `.a .b:not(.c) .d` (0,4,0) beats a
+  shorter exception, so write the exception longer.
 
 ## Data notes
 - Seeded to-dos (no `meeting` field) are linked to a meeting through their `source` note.

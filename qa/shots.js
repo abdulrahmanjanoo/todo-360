@@ -32,7 +32,8 @@ const fs = require('fs');
     await page.screenshot({ path: path.join(out, `sheet-${scheme}.png`) });
     await ctx.close();
   }
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', deviceScaleFactor: 2 });
+  // a real phone: touch and no hover, so the per-row chip shows
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', deviceScaleFactor: 2, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   for (const [name, h] of shots.slice(0, 2)) {
     await page.goto(base + h); await page.waitForSelector('h1.lt'); await page.waitForTimeout(300);

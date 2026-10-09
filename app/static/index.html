@@ -121,7 +121,7 @@ svg{display:block}
    under the row. The chip is always there on touch screens and appears on hover with a pointer. Nothing reflows. */
 .list .row:not(.link){position:relative;grid-template-columns:auto 1fr}
 .list .row:not(.link) .main{padding-right:44px}
-.list .row:not(.link) .trail{display:none;grid-column:1/-1;justify-content:flex-start;padding-top:2px}
+.list .row:not(.link) .trail{display:none;grid-column:2/-1;justify-content:flex-start;padding-top:2px}  /* opens aligned with the title, like iOS disclosed content */
 .list .row.open:not(.link) .trail{display:flex}
 .more-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:44px;height:44px;padding:6px;border-radius:50%;background:var(--fill);background-clip:content-box;color:var(--label-2);display:grid;place-items:center;font-weight:700;letter-spacing:1px;font-size:15px;line-height:1;transition:opacity .15s ease-out}
 .more-btn.hide{display:none}
