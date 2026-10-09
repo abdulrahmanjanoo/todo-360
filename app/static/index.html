@@ -121,8 +121,12 @@ svg{display:block}
   /* hidden actions must not reserve width or cover text: the whole trail overlays the row's right edge on hover only */
   .list .row:not(.link){position:relative;grid-template-columns:auto 1fr}
   .list .row:not(.link) .trail{position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:6px 4px 6px 16px;border-radius:999px;background:var(--card);flex-wrap:nowrap;opacity:0;visibility:hidden;transition:opacity .15s ease-out}
-  .list .row:not(.link):hover .trail,.list .row:not(.link):focus-within .trail{opacity:1;visibility:visible}
+  /* on hover the actions come back into flow so the title reflows instead of being covered */
+  .list .row:not(.link):hover,.list .row:not(.link):focus-within{grid-template-columns:auto 1fr auto}
+  .list .row:not(.link):hover .trail,.list .row:not(.link):focus-within .trail{opacity:1;visibility:visible;position:static;transform:none;padding:0;background:none}
   .sheet .row .trail{position:static;transform:none;padding:0;opacity:1;visibility:visible}
+  .sheet .list .row:not(.link){grid-template-columns:auto 1fr auto}
+  .more-btn{display:none}
   .sheet .list .row:not(.link){grid-template-columns:auto 1fr auto}
 }
 .row.link:hover{background:color-mix(in srgb,var(--label) 4%,transparent)}
@@ -150,6 +154,8 @@ svg{display:block}
 .pill.blue{color:var(--blue);background:var(--accent-dim)}
 .pill.money{color:var(--c-money);background:color-mix(in srgb,var(--c-money) 14%,transparent);cursor:pointer}
 .pill.money svg{width:11px;height:11px}
+.why{display:inline-flex;align-items:center;gap:4px}
+.why svg{width:11px;height:11px;color:var(--c-money)}
 /* quiet row actions */
 .act{padding:4px 10px;border-radius:999px;font-size:13px;line-height:18px;font-weight:500;color:var(--label-2);background:var(--fill);white-space:nowrap}
 @media (hover:none){.act{padding:8px 14px}.circ{width:28px;height:28px}}
@@ -217,9 +223,14 @@ ul.tk li{margin:4px 0}
   .controls .line{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0 16px 2px;margin-inline:-16px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
   .controls .line::after{content:"";flex:none;width:16px}
   .seg{flex:none}
-  .list .row{grid-template-columns:auto 1fr}
-  .list .row:not(.link){position:static;transform:none}
-  .list .row:not(.link) .trail{position:static;transform:none;padding:0;grid-column:1/-1;justify-content:flex-start;background:none;opacity:1;visibility:visible}
+  /* one "more" chip per row; the actions open under the row on tap (Reminders keeps rows to a title) */
+  .list .row,.list .row:not(.link){grid-template-columns:auto 1fr auto;transform:none}
+  .list .row:not(.link) .trail{display:none;position:static;transform:none;padding:0;grid-column:1/-1;justify-content:flex-start;background:none;opacity:1;visibility:visible}
+  .list .row.open:not(.link) .trail{display:flex}
+  .more-btn{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--fill);color:var(--label-2);font-weight:700;letter-spacing:1px;font-size:15px;line-height:1}
+  .row.open .more-btn{color:var(--blue)}
+  .sheet .list .row:not(.link) .trail{display:flex}
+  .sheet .more-btn{display:none}
   .row .trail .act{padding:8px 14px}
   .circ{width:28px;height:28px}
   .list .row.link .trail{grid-column:auto}
@@ -357,10 +368,10 @@ function render(){
 /* three states: automatic (Revenue / Not revenue flips it), overridden by Abdul (Reset to automatic) */
 function moneyAction(x){
   const o = S.snap.decisions.money[x.id]?.verdict;
-  if(o) return `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="clear" title="Back to the automatic tag">Reset to automatic</button>`;
+  if(o) return `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="clear" title="Back to the automatic tag">Use automatic</button>`;
   return x.money
-    ? `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="no" title="Remove the #revenue tag">Not revenue</button>`
-    : `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="yes" title="Tag as revenue">Revenue</button>`;
+    ? `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="no" title="Remove the #revenue tag">Remove tag</button>`
+    : `<button class="act money" type="button" data-money="${esc(x.id)}" data-verdict="yes" title="Tag as revenue">Tag as revenue</button>`;
 }
 /* "Abdul Rahman Janoo to send the deck" -> "Send the deck" when the owner is shown beside it anyway (display only) */
 function verb(t){
@@ -379,7 +390,7 @@ function moneyPill(x, opts={}){
   if(!isMoney(x)) return "";
   const why = o === "yes" ? "tagged by you" : (x.money_reasons || []).slice(0, 2).join(", ");
   const reason = why ? `<span class="l3">${esc(why)}</span>` : "";
-  if(opts.inMoney) return reason;  // the view already says revenue; keep the why so the tag can be audited
+  if(opts.inMoney) return why ? `<span class="l3 why">${I.money}${esc(why)}</span>` : "";  // the view already says revenue; keep the why, anchored by the glyph
   return `<button class="pill money" type="button" data-money-filter title="Show only revenue to-dos">${I.money}#revenue</button>${reason}`;
 }
 function todoRow(t, opts={}){
@@ -403,7 +414,7 @@ function todoRow(t, opts={}){
     <div class="t">${esc(verb(t))}</div>
     <div class="s"><span>${owner}</span>${tag}<span>${ageWords(t.age_days)}</span>${moneyPill(t, opts)}
       ${!opts.noMeeting && mt ? `<a href="#/meeting/${encodeURIComponent(mt.id)}">${esc(mt.title)}</a>` : ""}${status}</div>
-  </div><div class="trail">${acts}${moneyAct}</div></div>`;
+  </div>${open ? `<button class="more-btn" type="button" data-open-row="${esc(t.id)}" aria-label="More actions">···</button>` : `<span class="more-btn hide"></span>`}<div class="trail">${acts}${moneyAct}</div></div>`;
 }
 function meetingRow(m){
   const st = meetingState(m);
@@ -445,7 +456,7 @@ function viewFocus(){
   </div>
   <div class="sec-h">Highlights</div>
   <div class="grid">
-    <a class="card metric c6" href="#/todos?owner=me&money=1" style="--hue:var(--c-money)"><div class="hd"><h2>${I.money}Revenue</h2><span class="when">${readAt()}${I.chev}</span></div>
+    <a class="card metric c6" href="#/todos?owner=me&money=1" style="--hue:var(--c-money)"><div class="hd"><h2>${I.money}Revenue</h2><span class="when">Today${I.chev}</span></div>
       <div class="bd"><div class="hl">About <b>${share}%</b> of everything open is tied to money. <b>${moneyMine.length}</b> of those are on you.</div>
       <div class="bar"><i style="width:${share}%"></i></div><div class="hl"><div class="fact">Revenue share of ${open.length} open to-dos</div></div></div></a>
     <a class="card metric c6" href="#/meetings?mstatus=unconfirmed" style="--hue:var(--c-meet)"><div class="hd"><h2>${I.cal}Meetings</h2><span class="when">7 days${I.chev}</span></div>
@@ -547,7 +558,7 @@ function viewGaps(){
   const byStatus = s => g.failed.filter(m => m.status === s);
   const sec = (title, sub, rows, empty) => `<div class="sec-h">${title}<span class="sub">${sub}</span></div><div class="card list">${rows || `<div class="empty">${empty}</div>`}</div>`;
   return `<h1 class="lt">Gaps</h1><div class="lt-sub">${g.total ? `${g.total} to chase` : "Nothing to chase"}</div>`
-    + sec("Waiting", "should clear on a later run", [...byStatus("deferred"), ...byStatus("not_extracted")].map(meetingRow).join(""), "Nothing waiting.")
+    + sec("Waiting", "still being processed at the source",[...byStatus("deferred"), ...byStatus("not_extracted")].map(meetingRow).join(""), "Nothing waiting.")
     + sec("Captured without an Airtable row", "note exists, link missing", g.noAt.map(meetingRow).join(""), "Every captured meeting has its Airtable row.")
     + sec("Notes failing checks", "opens the note in Obsidian", lintRows(g.lint), "All notes pass.")
     + sec("Not captured", "empty or broken recordings", byStatus("skipped").map(meetingRow).join(""), "No capture failures.")
@@ -599,8 +610,9 @@ function openSheet(id){
 
 /* ---------- events ---------- */
 document.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-todo],[data-money],[data-money-filter],[data-more],[data-load],[data-seg] button,[data-v]");
+  const el = ev.target.closest("[data-todo],[data-money],[data-money-filter],[data-more],[data-load],[data-open-row],[data-seg] button,[data-v]");
   if(!el) return;
+  if(el.dataset.openRow){ const row = el.closest(".row"); const was = row.classList.contains("open"); document.querySelectorAll(".row.open").forEach(r => r.classList.remove("open")); if(!was) row.classList.add("open"); return; }
   if(el.dataset.moneyFilter !== undefined){ ev.preventDefault(); return go("todos", {money:1, owner:S.f.owner}); }  // keeps your owner filter
   if(el.dataset.more){ S.limit[el.dataset.more] = (S.limit[el.dataset.more] || ({todos:20, meetings:40})[el.dataset.more]) * 2; return render(); }
   if(el.dataset.todo){
