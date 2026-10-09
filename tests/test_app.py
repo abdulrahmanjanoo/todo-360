@@ -155,6 +155,17 @@ class MoneyTest(unittest.TestCase):
         self.assertFalse(money.classify("Abdul to send the call recordings for review")["money"])
         self.assertFalse(money.classify("Interview the HR candidate on long term fit, 2 L offer")["money"])
 
+    def test_our_own_costs_are_not_revenue(self):
+        import money
+        self.assertFalse(money.classify("Abdul to interview the HR candidate and decide on the 12 lakh offer")["money"])
+        self.assertFalse(money.classify("Vijay to cancel the Prospeo subscription")["money"])
+        self.assertFalse(money.classify("Abdul to sync with Muhammad on agreements, compliance records and intern employment")["money"])
+        self.assertIn("people cost", money.classify("Abdul to decide on the 12 lakh HR offer")["reasons"])
+
+    def test_cost_sent_to_a_client_is_revenue(self):
+        import money
+        self.assertTrue(money.classify("Abdul to send the Middle East plate scanning scope and enhancement cost to Ritchie Kelk")["money"])
+
     def test_override_wins(self):
         import money
         self.assertTrue(money.effective({"money": False}, "yes"))

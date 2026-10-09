@@ -17,7 +17,7 @@ test('Focus: pinned cards, each one a link, no ISO dates', async ({ page }) => {
   await page.goto('/#/');
   await expect(page.locator('h1.lt')).toHaveText('Focus');
   const cards = page.locator('a.card.metric');
-  await expect(cards).toHaveCount(6);
+  await expect(cards).toHaveCount(8); // six pinned metrics + two highlights, all links
   for (const href of await cards.evaluateAll(els => els.map(e => e.getAttribute('href')))) expect(href).toMatch(/^#\//);
   await expect(cards.first().locator('h2')).toHaveText(/Revenue/);
   await expect(cards.first().locator('.val')).toContainText('2'); // T-0101 and T-0103 are revenue and on Abdul
@@ -30,13 +30,14 @@ test('To-dos: Money filter keeps only revenue to-dos and the tag explains itself
   await page.goto('/#/todos?owner=me&money=0');
   await expect(page.locator('h1.lt')).toHaveText('To-dos');
   await expect(page.locator('.list .row[data-id]')).toHaveCount(4);
+  await expect(page.locator('.list .row[data-id] .pill.money')).toHaveCount(2); // tagged rows carry the pill
+  await expect(page.locator('.row[data-id="T-0101"] .s')).toContainText('proposal, price'); // and say why, on the line
   await page.locator('#fMoney').click();
   await expect(page.locator('#fMoney')).toHaveAttribute('aria-pressed', 'true');
   const rows = page.locator('.list .row[data-id]');
   await expect(rows).toHaveCount(2);
-  await expect(rows.locator('.pill.money')).toHaveCount(2);
-  const title = await rows.first().locator('.pill.money').getAttribute('title');
-  expect(title).toMatch(/Revenue signal/);
+  await expect(rows.locator('.pill.money')).toHaveCount(0); // the filter already says it; no pill repeated per row
+  await expect(rows.locator('button.act.money')).toHaveText(['Not revenue', 'Not revenue']);
   // the Focus card deep link lands on the same filter
   await page.goto('/#/todos?owner=me&money=1');
   await expect(page.locator('#fMoney')).toHaveAttribute('aria-pressed', 'true');
@@ -109,6 +110,47 @@ test('Gaps: lists the skipped and deferred meetings', async ({ page }) => {
   await expect(page.locator('h1.lt')).toHaveText('Gaps');
   await expect(page.locator('main')).toContainText('Bank Loan Guy');
   await expect(page.locator('main')).toContainText('Prem Cargo');
+});
+
+test('Focus: each card opens exactly what it counted', async ({ page }) => {
+  const card = title => page.locator('a.card.metric', { has: page.locator('h2', { hasText: title }) });
+  await page.goto('/#/');
+  await card('Older than 30 days').click();
+  await expect(page.locator('h1.lt')).toHaveText('To-dos');
+  await expect(page.locator('[data-seg="age"] button[aria-pressed="true"]')).toHaveText('Over 30 days');
+  await expect(page.locator('.list .row[data-id]')).toHaveCount(2); // T-0006 (31 days) and T-0103 (69 days)
+  await page.goto('/#/');
+  await card('New this week').click();
+  await expect(page.locator('[data-seg="age"] button[aria-pressed="true"]')).toHaveText('This week');
+  await expect(page.locator('.list .row[data-id]')).toHaveCount(2); // T-0101, T-0102
+  await page.goto('/#/');
+  await card('Meetings this week').click();
+  await expect(page.locator('[data-seg="mstatus"] button[aria-pressed="true"]')).toHaveText('To confirm');
+});
+
+test('Copy: your own rows read as actions, not "Abdul Rahman Janoo to"; times in Apple voice', async ({ page }) => {
+  await page.goto('/#/todos?owner=me&money=0&age=all');
+  const texts = await page.locator('.list .row[data-id] .t').allInnerTexts();
+  for (const t of texts) expect(t).not.toMatch(/^Abdul/);
+  expect(texts).toContain('Send Pradip the pricing proposal for the pilot');
+  await page.goto('/#/meetings');
+  await expect(page.locator('main')).toContainText('6:51 PM');
+  await expect(page.locator('main')).not.toContainText('IST');
+});
+
+test('Light mode: controls sit on a visible fill, never on the page colour', async ({ browser }) => {
+  const ctx = await browser.newContext({ colorScheme: 'light' });
+  const page = await ctx.newPage();
+  await page.goto('/#/todos?owner=me&money=0');
+  const [bodyBg, searchBg, segBg] = await page.evaluate(() => [
+    getComputedStyle(document.body).backgroundColor,
+    getComputedStyle(document.querySelector('.search')).backgroundColor,
+    getComputedStyle(document.querySelector('.seg')).backgroundColor,
+  ]);
+  expect(searchBg).not.toBe(bodyBg);
+  expect(segBg).not.toBe(bodyBg);
+  expect(searchBg).not.toBe('rgba(0, 0, 0, 0)');
+  await ctx.close();
 });
 
 test('Layout: nothing overflows horizontally at phone width', async ({ page }) => {

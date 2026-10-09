@@ -99,6 +99,9 @@ def load_raw(v):
         if not mid:
             continue
         parts = fm.get("participants") or []
+        parts = parts if isinstance(parts, list) else [parts]
+        # "Ben Trafford1" -> "Ben Trafford"; bare e-mail addresses are invitees, not people in the room
+        parts = [re.sub(r"\d+$", "", p).strip() for p in parts if p and "@" not in p]
         out[mid] = {
             "raw_file": v.rel(path),
             "raw_title": os.path.basename(path)[:-3],
@@ -110,7 +113,7 @@ def load_raw(v):
             "platform": fm.get("platform") or "",
             "report_url": fm.get("report-url") or "",
             "complete": str(fm.get("complete", "")).lower() == "true",
-            "participants": parts if isinstance(parts, list) else [parts],
+            "participants": parts,
             "words": len(body.split()),
         }
     return out

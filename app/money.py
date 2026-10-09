@@ -38,6 +38,12 @@ STRONG = [
     (r"\blicen[cs]e fee|\bsubscription\b", "subscription"),
     (r"\bclose the deal\b|\bdeal (value|size)\b|\bwin (the|one|a|this) (customer|deal|account|contract)\b", "close"),
     (r"\bsign(ing|ed)? (the |off (on )?)?(contract|agreement|msa|sow|nda|proposal)\b", "signature"),
+    (r"\b(send|share|put|give|present)\b.{0,60}\bcosts?\b|\bcosts? (to|for) [A-Z]", "cost to client"),
+]
+# money that leaves Tericsoft, or people costs: a hire, a salary, a vendor bill. Not revenue.
+NEGATIVE = [
+    (r"\bhr\b|\bhir(e|ing)\b|\brecruit|\bcandidate|\bintern(s|ship)?\b|\bsalary|\bpayroll|\bemployment|\bappraisal|\bjoining\b", "people cost"),
+    (r"\bcancel|\bunsubscribe|\bour (cloud|aws|azure|gcp|server) (bill|cost)|\bvendor (bill|invoice|payment)|\brenew our\b", "our own cost"),
 ]
 MEDIUM = [
     (r"\bpilots?\b", "pilot"),
@@ -79,8 +85,11 @@ def classify(text, tag=""):
             hits.append((label, 1))
             anchored = True
     score = sum(w for _, w in hits)
+    neg = _hits(NEGATIVE, text, 3)
+    score -= sum(w for _, w in neg)
     # two deal-stage words alone (demo + customer) are not a money signal; something has to anchor it
-    return {"money": anchored and score >= MIN_SCORE, "score": score, "reasons": [l for l, _ in hits][:6]}
+    return {"money": anchored and score >= MIN_SCORE, "score": score,
+            "reasons": [l for l, _ in hits][:6] if score >= MIN_SCORE else [l for l, _ in neg]}
 
 
 def effective(todo, override=None):
