@@ -33,4 +33,4 @@ about 1 in 4 older than 30 days). He wants one place to see what was captured, w
    as a flag for the next lint.
 4. "Stale" view: open to-dos with no mention for 30 days (needs last-mention data from the engine).
 5. Airtable Tasks sync for the to-dos Abdul keeps (optional, ask first).
-6. Push to a private GitHub repo `abdulrahmanjanoo/todo-360`.
+6. Done 9 Oct 2026: pushed to `github.com/abdulrahmanjanoo/todo-360` (created public; CLAUDE.md asks for private).

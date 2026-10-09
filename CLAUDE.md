@@ -33,4 +33,4 @@ to-do and meeting the daily Read AI / Wispr Flow run produced, lets Abdul decide
 
 ## Git practice
 Feature → tests green → commit with a plain scoped message. **No Co-Authored-By or AI attribution
-in commit messages** (Abdul's hard rule). Remote: to be created as `github.com/abdulrahmanjanoo/todo-360` (private).
+in commit messages** (Abdul's hard rule). Remote: `github.com/abdulrahmanjanoo/todo-360`, branch `main`. Keep it private.
