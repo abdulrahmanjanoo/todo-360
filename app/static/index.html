@@ -118,13 +118,11 @@ svg{display:block}
 .row.link .t{color:var(--label)}
 /* row actions stay quiet until the pointer is on the row; always visible on touch screens */
 @media (hover:hover){
-  .row .trail .act{opacity:0;visibility:hidden;transition:opacity .15s ease-out}
-  .row:hover .trail .act,.row:focus-within .trail .act,.row .trail .act.on{opacity:1;visibility:visible}
-  /* hidden actions must not reserve width: they overlay the row's right edge on hover */
+  /* hidden actions must not reserve width or cover text: the whole trail overlays the row's right edge on hover only */
   .list .row:not(.link){position:relative;grid-template-columns:auto 1fr}
-  .list .row:not(.link) .trail{position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:6px 4px 6px 16px;border-radius:999px;background:var(--card);flex-wrap:nowrap}
-  .sheet .row .trail{position:static;transform:none;padding:0}
-  .sheet .row .trail .act{opacity:1;visibility:visible}
+  .list .row:not(.link) .trail{position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:6px 4px 6px 16px;border-radius:999px;background:var(--card);flex-wrap:nowrap;opacity:0;visibility:hidden;transition:opacity .15s ease-out}
+  .list .row:not(.link):hover .trail,.list .row:not(.link):focus-within .trail{opacity:1;visibility:visible}
+  .sheet .row .trail{position:static;transform:none;padding:0;opacity:1;visibility:visible}
   .sheet .list .row:not(.link){grid-template-columns:auto 1fr auto}
 }
 .row.link:hover{background:color-mix(in srgb,var(--label) 4%,transparent)}
@@ -221,8 +219,8 @@ ul.tk li{margin:4px 0}
   .seg{flex:none}
   .list .row{grid-template-columns:auto 1fr}
   .list .row:not(.link){position:static;transform:none}
-  .list .row:not(.link) .trail{position:static;transform:none;padding:0;grid-column:1/-1;justify-content:flex-start;background:none}
-  .row .trail .act{opacity:1;visibility:visible;padding:8px 14px}
+  .list .row:not(.link) .trail{position:static;transform:none;padding:0;grid-column:1/-1;justify-content:flex-start;background:none;opacity:1;visibility:visible}
+  .row .trail .act{padding:8px 14px}
   .circ{width:28px;height:28px}
   .list .row.link .trail{grid-column:auto}
   .sheet .body{padding-bottom:110px}
